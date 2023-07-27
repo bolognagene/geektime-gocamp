@@ -11,7 +11,7 @@ import "fmt"
 // 参数2： 删除的元素
 // 参数3： 错误信息
 
-// DeleteIdxV1 考虑使用比较高性能的实现
+// DeleteIdxV1 能够实现删除操作就可以
 func DeleteIdxV1(src []int, idx int) ([]int, int, error) {
 	if idx < 0 || idx >= len(src) {
 		return src, 0, fmt.Errorf("删除下标错误")

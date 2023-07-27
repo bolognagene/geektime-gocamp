@@ -1,0 +1,9 @@
+C:\Users\gzhen\AppData\Local\JetBrains\GoLand2023.1\tmp\GoLand\___go_build_my_homework_homework1.exe
+DeleteIdxV1: 删除后的切片为： [1 2 3 5 6 7]; 删除的下标是：3, 删除的元素是： 4
+DeleteIdxV2: 删除后的切片为： [1 2 3 4 5 7 8]; 删除的下标是：5, 删除的元素是： 6
+DeleteIdxV3: 删除后的切片为： [one two three four six seven]; 删除的下标是：4, 删除的元素是： five 
+开始缩容，旧切片的容量为：7，长度为：2
+缩容结束，新切片的容量为：3，长度为：1
+DeleteIdxV4: 删除后的切片为： [two]; 删除的下标是：0, 删除的元素是： one
+
+Process finished with the exit code 0
