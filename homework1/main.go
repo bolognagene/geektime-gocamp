@@ -55,7 +55,7 @@ func DeleteIdxV3[T any](src []T, idx int) ([]T, T, error) {
 }
 
 // DeleteIdxV4 支持缩容，并且设计缩容机制
-// 我的缩容算法，当切片长度小于切片容量的1/3时触发切片的缩容，新切片的容量为老切片的一半
+// 我的缩容算法是，当切片长度小于切片容量的1/3时触发切片的缩容，新切片的容量为老切片的一半
 func DeleteIdxV4[T any](src []T, idx int) ([]T, T, error) {
 	var res T
 	if idx < 0 || idx >= len(src) {
