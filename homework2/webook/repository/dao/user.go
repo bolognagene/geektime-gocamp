@@ -2,15 +2,9 @@ package dao
 
 import (
 	"context"
-	"errors"
 	"github.com/go-sql-driver/mysql"
 	"gorm.io/gorm"
 	"time"
-)
-
-var (
-	ErrUserDuplicateEmail = errors.New("邮箱冲突")
-	ErrUserNotFound       = gorm.ErrRecordNotFound
 )
 
 type UserDAO struct {

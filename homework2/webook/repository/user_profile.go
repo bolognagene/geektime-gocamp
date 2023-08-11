@@ -25,9 +25,9 @@ func (r *UserProfileRepository) Create(ctx context.Context, up domain.UserProfil
 	})
 }
 
-func (r *UserProfileRepository) FindById(ctx context.Context, uid int64) (domain.UserProfile, error) {
+func (r *UserProfileRepository) FindByUserId(ctx context.Context, uid int64) (domain.UserProfile, error) {
 	// SELECT * FROM `user_profile` WHERE `userid`=?
-	up, err := r.dao.FindById(ctx, uid)
+	up, err := r.dao.FindByUserId(ctx, uid)
 	if err != nil {
 		return domain.UserProfile{}, err
 	}
@@ -40,10 +40,12 @@ func (r *UserProfileRepository) FindById(ctx context.Context, uid int64) (domain
 }
 
 func (r *UserProfileRepository) Update(ctx context.Context, up domain.UserProfile) error {
-	return r.dao.Update(ctx, dao.UserProfile{
+	/*return r.dao.Update(ctx, dao.UserProfile{
 		UserId:   up.UserId,
 		NickName: up.NickName,
 		Birthday: up.Birthday,
 		Intro:    up.Intro,
-	})
+	})*/
+
+	return r.dao.Update(ctx, up)
 }

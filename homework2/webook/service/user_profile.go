@@ -1,15 +1,12 @@
 package service
 
 import (
-	"errors"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/homework2/webook/domain"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/homework2/webook/repository"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
-
-var ErrNotLogin = errors.New("还没有登录")
 
 type UserProfileService struct {
 	repo *repository.UserProfileRepository
@@ -38,33 +35,10 @@ func (svc *UserProfileService) Edit(ctx *gin.Context, up domain.UserProfile) err
 		return err
 	}
 
-	// 根据userId来查询user_profile表，如果已经有这条记录就调用Update，否则调用Create
-	upp, err := svc.repo.FindById(ctx, uid.(int64))
-	// 如果没找到，就创建这条记录
-	if err == repository.ErrUserNotFound {
-		createErr := svc.repo.Create(ctx, up)
-		if createErr != nil {
-			return createErr
-		}
-
-		return nil
-	}
-
-	// 其他错误直接返回
+	up.UserId = uid.(int64)
+	err = svc.repo.Update(ctx, up)
 	if err != nil {
 		return err
-	}
-
-	// 如果成功找到UserProfile, 则更新改记录
-	updateError := svc.repo.Update(ctx, domain.UserProfile{
-		UserId:   upp.UserId,
-		NickName: up.NickName,
-		Birthday: up.Birthday,
-		Intro:    up.Intro,
-	})
-
-	if updateError != nil {
-		return updateError
 	}
 
 	return nil
@@ -78,9 +52,13 @@ func (svc *UserProfileService) Profile(ctx *gin.Context) (domain.UserProfile, er
 		return upnil, err
 	}
 
-	up, err := svc.repo.FindById(ctx, uid.(int64))
+	up, err := svc.repo.FindByUserId(ctx, uid.(int64))
+	if err == ErrUserNotFound {
+		// User profile没有找到是正常现象，因此直接返回nil的错误
+		return upnil, nil
+	}
 	if err != nil {
-		return up, err
+		return upnil, err
 	}
 
 	return up, nil

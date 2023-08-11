@@ -75,7 +75,7 @@ func (u *UserHandler) SignUp(ctx *gin.Context) {
 		return
 	}
 	if !ok {
-		ctx.String(http.StatusOK, "密码必须大于8位，包含数字、特殊字符")
+		ctx.String(http.StatusOK, "密码必须大于8位，包含英文字母、数字、特殊字符")
 		return
 	}
 
@@ -107,7 +107,7 @@ func (u *UserHandler) Login(ctx *gin.Context) {
 		return
 	}
 	user, err := u.svc.Login(ctx, req.Email, req.Password)
-	if err == service.ErrInvalidUserOrPassword {
+	if err == ErrInvalidUserOrPassword {
 		ctx.String(http.StatusOK, "用户名或密码不对")
 		return
 	}

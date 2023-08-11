@@ -2,6 +2,7 @@ package dao
 
 import (
 	"context"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/homework2/webook/domain"
 	"github.com/go-sql-driver/mysql"
 	"gorm.io/gorm"
 	"time"
@@ -17,9 +18,10 @@ func NewUserProfileDAO(db *gorm.DB) *UserProfileDao {
 	}
 }
 
-func (dao *UserProfileDao) FindById(ctx context.Context, uid int64) (UserProfile, error) {
+func (dao *UserProfileDao) FindByUserId(ctx context.Context, uid int64) (UserProfile, error) {
+	// SELECT * FROM USER_PROFILE WHERE USER_ID = ?
 	var up UserProfile
-	err := dao.db.WithContext(ctx).Where("userid = ?", uid).First(&up).Error
+	err := dao.db.WithContext(ctx).Where("user_id = ?", uid).First(&up).Error
 	//err := dao.db.WithContext(ctx).First(&u, "email = ?", email).Error
 	return up, err
 }
@@ -40,11 +42,25 @@ func (dao *UserProfileDao) Insert(ctx context.Context, up UserProfile) error {
 	return err
 }
 
-func (dao *UserProfileDao) Update(ctx context.Context, up UserProfile) error {
+func (dao *UserProfileDao) Update(ctx context.Context, up domain.UserProfile) error {
 	// 存毫秒数
 	now := time.Now().UnixMilli()
-	up.Utime = now
-	err := dao.db.WithContext(ctx).Save(&up).Error
+
+	// 先找
+	upp, err := dao.FindByUserId(ctx, up.UserId)
+	if err == ErrUserNotFound {
+		upp.Ctime = now
+		upp.UserId = up.UserId
+	} else if err != nil {
+		return err
+	}
+
+	upp.NickName = up.NickName
+	upp.Birthday = up.Birthday
+	upp.Intro = up.Intro
+	upp.Utime = now
+
+	err = dao.db.WithContext(ctx).Save(&upp).Error
 	if err != nil {
 		return err
 	}

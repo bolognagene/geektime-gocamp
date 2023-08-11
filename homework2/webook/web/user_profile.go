@@ -18,11 +18,11 @@ type UserProfileHandler struct {
 func NewUserProfileHandler(svc *service.UserProfileService) *UserProfileHandler {
 	const (
 		// 昵称长度至多8个中文字符或者16个英文字符
-		nickNameRegexPattern = `^[\u4E00-\u9FA5]{1,8}$|^[A-Za-z]{1,16}$`
+		nickNameRegexPattern = `^[\s\S\u4E00-\u9FA5]{1,16}$`
 		// 生日需要符合 YYYY-MM-DD 的格式
 		birthdayRegexPattern = `^(19|20)\d{2}-(1[0-2]|0?[1-9])-(0?[1-9]|[1-2][0-9]|3[0-1])$`
 		// 简介长度至多64个中文字符或者128个英文字符
-		introRegexPattern = `^[\u4E00-\u9FA5]{1,64}$|^[A-Za-z]{1,128}$`
+		introRegexPattern = `^[\s\S\u4E00-\u9FA5]{1,128}$`
 	)
 	nickNameExp := regexp.MustCompile(nickNameRegexPattern, regexp.None)
 	birthdayExp := regexp.MustCompile(birthdayRegexPattern, regexp.None)
@@ -37,7 +37,7 @@ func NewUserProfileHandler(svc *service.UserProfileService) *UserProfileHandler 
 
 func (uph *UserProfileHandler) RegisterRoutes(server *gin.Engine) {
 	ug := server.Group("/users/profile")
-	ug.GET("/", uph.Profile)
+	ug.GET("", uph.Profile)
 	ug.POST("/edit", uph.Edit)
 }
 
@@ -108,5 +108,5 @@ func (uph *UserProfileHandler) Profile(ctx *gin.Context) {
 		return
 	}
 
-	ctx.String(http.StatusOK, "这是你的 Profile: \n 昵称是: "+up.NickName+", 生日是:"+up.Birthday+", 简介是"+up.Intro)
+	ctx.String(http.StatusOK, "这是你的 Profile: \n 昵称是: "+up.NickName+", 生日是:"+up.Birthday+", 简介是: "+up.Intro)
 }

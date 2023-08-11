@@ -2,14 +2,10 @@ package service
 
 import (
 	"context"
-	"errors"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/homework2/webook/domain"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/homework2/webook/repository"
 	"golang.org/x/crypto/bcrypt"
 )
-
-var ErrUserDuplicateEmail = repository.ErrUserDuplicateEmail
-var ErrInvalidUserOrPassword = errors.New("账号/邮箱或密码不对")
 
 type UserService struct {
 	repo *repository.UserRepository
@@ -24,7 +20,7 @@ func NewUserService(repo *repository.UserRepository) *UserService {
 func (svc *UserService) Login(ctx context.Context, email, password string) (domain.User, error) {
 	// 先找用户
 	u, err := svc.repo.FindByEmail(ctx, email)
-	if err == repository.ErrUserNotFound {
+	if err == ErrUserNotFound {
 		return domain.User{}, ErrInvalidUserOrPassword
 	}
 	if err != nil {
