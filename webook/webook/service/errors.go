@@ -2,7 +2,7 @@ package service
 
 import (
 	"errors"
-	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/homework2/webook/repository"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/repository"
 )
 
 // 这种error方式很啰嗦，得研究下真实项目里error如何组织

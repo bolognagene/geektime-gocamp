@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wb-sql
+  labels:
+    app: wb-sql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wb-sql
+  template:
+    metadata:
+      name: wb-sql
+      labels:
+        app: wb-sql
+    spec:
+      containers:
+        - name: wb-sql
+          image: mysql:8.0
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: root
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+#            - 这边要对应到 mysql 的数据存储的位置
+#            - 通过 MySQL 的配置可以改这个目录
+            - mountPath: /var/lib/mysql
+              name: mysql-storage
+          ports:
+            - containerPort: 3306
+      restartPolicy: Always
+      volumes:
+        - name: mysql-storage
+          persistentVolumeClaim:
+            claimName: wb-mysql-claim
+      

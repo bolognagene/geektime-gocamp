@@ -1,15 +1,16 @@
 package main
 
 import (
-	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/homework2/webook/repository"
-	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/homework2/webook/repository/dao"
-	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/homework2/webook/service"
-	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/homework2/webook/web"
-	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/homework2/webook/web/middleware"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/config"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/repository"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/repository/dao"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/repository/dao/cache"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/service"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/web"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/web/middleware"
 	"github.com/gin-contrib/cors"
-	"github.com/gin-contrib/sessions"
-	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"strings"
@@ -18,20 +19,18 @@ import (
 
 func main() {
 	db := initDB()
+	redisClient := initRedis()
 	server := initWebServer()
 
-	u := initUser(db)
+	u := initUser(db, redisClient)
 	u.RegisterRoutes(server)
-
-	up := initUserProfile(db)
-	up.RegisterRoutes(server)
 
 	/*server := gin.Default()
 		server.GET("/hello", func(ctx *gin.Context) {
 			ctx.String(http.StatusOK, "Hello!")
 	})*/
 
-	server.Run(":8077")
+	server.Run(":8081")
 }
 
 func initWebServer() *gin.Engine {
@@ -48,8 +47,8 @@ func initWebServer() *gin.Engine {
 	server.Use(cors.New(cors.Config{
 		//AllowOrigins: []string{"*"},
 		//AllowMethods: []string{"POST", "GET"},
-		AllowHeaders: []string{"Content-Type", "Authorization"},
-		//ExposeHeaders: []string{"x-jwt-token"},
+		AllowHeaders:  []string{"Content-Type", "Authorization"},
+		ExposeHeaders: []string{"x-jwt-token"},
 		// 是否允许你带 cookie 之类的东西
 		AllowCredentials: true,
 		AllowOriginFunc: func(origin string) bool {
@@ -63,12 +62,12 @@ func initWebServer() *gin.Engine {
 	}))
 
 	// 步骤1
-	store := cookie.NewStore([]byte("secret"))
-	server.Use(sessions.Sessions("webook", store))
+	//store := cookie.NewStore([]byte("secret"))
+	//server.Use(sessions.Sessions("webook", store))
 	// 步骤3
-	server.Use(middleware.NewLoginMiddlewareBuilder().
-		IgnorePaths("/users/signup").
-		IgnorePaths("/users/login").Build())
+	/*server.Use(middleware.NewLoginMiddlewareBuilder().
+	IgnorePaths("/users/signup").
+	IgnorePaths("/users/login").Build())*/
 
 	// v1
 	//middleware.IgnorePaths = []string{"sss"}
@@ -77,27 +76,24 @@ func initWebServer() *gin.Engine {
 	// 不能忽略sss这条路径
 	//server1 := gin.Default()
 	//server1.Use(middleware.CheckLogin())
+
+	server.Use(middleware.NewLoginJWTMiddlewareBuilder().
+		IgnorePaths("/users/signup").
+		IgnorePaths("/users/login").Build())
 	return server
 }
 
-func initUser(db *gorm.DB) *web.UserHandler {
+func initUser(db *gorm.DB, redisClient *redis.Client) *web.UserHandler {
 	ud := dao.NewUserDAO(db)
-	repo := repository.NewUserRepository(ud)
+	uc := cache.NewUserCache(redisClient)
+	repo := repository.NewUserRepository(ud, uc)
 	svc := service.NewUserService(repo)
 	u := web.NewUserHandler(svc)
 	return u
 }
 
-func initUserProfile(db *gorm.DB) *web.UserProfileHandler {
-	upd := dao.NewUserProfileDAO(db)
-	repo := repository.NewUserProfileRepository(upd)
-	svc := service.NewUserProfileService(repo)
-	up := web.NewUserProfileHandler(svc)
-	return up
-}
-
 func initDB() *gorm.DB {
-	db, err := gorm.Open(mysql.Open("root:12345678@tcp(192.168.181.130:3306)/webook"))
+	db, err := gorm.Open(mysql.Open(config.Config.DB.DSN))
 	if err != nil {
 		// 我只会在初始化过程中 panic
 		// panic 相当于整个 goroutine 结束
@@ -110,4 +106,12 @@ func initDB() *gorm.DB {
 		panic(err)
 	}
 	return db
+}
+
+func initRedis() *redis.Client {
+	redisClient := redis.NewClient(&redis.Options{
+		Addr: config.Config.Redis.Addr,
+	})
+
+	return redisClient
 }

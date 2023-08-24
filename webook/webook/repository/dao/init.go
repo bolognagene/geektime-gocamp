@@ -8,7 +8,7 @@ func InitTable(db *gorm.DB) error {
 		panic(err)
 	}
 
-	err = db.AutoMigrate(&UserProfile{})
+	err = db.AutoMigrate(&User{})
 	if err != nil {
 		panic(err)
 	}

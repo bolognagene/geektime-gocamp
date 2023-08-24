@@ -1,6 +1,6 @@
 package repository
 
-import "github.com/bolognagene/geektime-gocamp/geektime-gocamp/homework2/webook/repository/dao"
+import "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/repository/dao"
 
 var (
 	ErrUserDuplicateEmail = dao.ErrUserDuplicateEmail

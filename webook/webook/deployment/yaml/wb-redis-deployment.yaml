@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wb-redis
+  labels:
+    app: wb-redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wb-redis
+  template:
+    metadata:
+      name: wb-redis
+      labels:
+        app: wb-redis
+    spec:
+      containers:
+        - name: wb-redis
+          image: redis:latest
+          imagePullPolicy: IfNotPresent
+      restartPolicy: Always
+      
