@@ -3,11 +3,14 @@ package main
 import (
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/config"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/repository"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/repository/cache"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/repository/cache/sms/local"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/repository/dao"
-	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/repository/dao/cache"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/service"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/service/sms/memory"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/web"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/web/middleware"
+	"github.com/coocood/freecache"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
@@ -30,7 +33,7 @@ func main() {
 			ctx.String(http.StatusOK, "Hello!")
 	})*/
 
-	server.Run(":8081")
+	server.Run(":8077")
 }
 
 func initWebServer() *gin.Engine {
@@ -79,7 +82,9 @@ func initWebServer() *gin.Engine {
 
 	server.Use(middleware.NewLoginJWTMiddlewareBuilder().
 		IgnorePaths("/users/signup").
-		IgnorePaths("/users/login").Build())
+		IgnorePaths("/users/login").
+		IgnorePaths("/users/login/sms/send").
+		IgnorePaths("/users/login/sms/code").Build())
 	return server
 }
 
@@ -88,7 +93,16 @@ func initUser(db *gorm.DB, redisClient *redis.Client) *web.UserHandler {
 	uc := cache.NewUserCache(redisClient)
 	repo := repository.NewUserRepository(ud, uc)
 	svc := service.NewUserService(repo)
-	u := web.NewUserHandler(svc)
+	smsSvc := memory.NewService()
+	// Redis for sms code
+	//sc := sms_redis.NewCodeCache(redisClient)
+	// freecache for sms code
+	cacheSize := 10 * 1024 * 1024
+	cache := freecache.NewCache(cacheSize)
+	sc := local.NewCodeCache(*cache)
+	smsRepo := repository.NewSMSCodeRepository(&sc)
+	codeSvc := service.NewSMSCodeService(smsRepo, smsSvc)
+	u := web.NewUserHandler(svc, codeSvc)
 	return u
 }
 

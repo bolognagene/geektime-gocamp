@@ -13,6 +13,7 @@ type User struct {
 	NickName string
 	Birthday string
 	Intro    string
+	Phone    string
 	Ctime    time.Time
 }
 

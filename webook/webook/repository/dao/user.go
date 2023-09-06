@@ -12,6 +12,7 @@ import (
 type User struct {
 	Id int64 `gorm:"primaryKey,autoIncrement"`
 	// 全部用户唯一
+	Phone    string `gorm:"unique"`
 	Email    string `gorm:"unique"`
 	Password string
 	NickName string
@@ -37,6 +38,14 @@ func (dao *UserDAO) FindByEmail(ctx context.Context, email string) (User, error)
 	// SELECT * FROM users WHERE email = ?
 	var u User
 	err := dao.db.WithContext(ctx).Where("email = ?", email).First(&u).Error
+	//err := dao.db.WithContext(ctx).First(&u, "email = ?", email).Error
+	return u, err
+}
+
+func (dao *UserDAO) FindByPhone(ctx context.Context, phone string) (User, error) {
+	// SELECT * FROM users WHERE phone = ?
+	var u User
+	err := dao.db.WithContext(ctx).Where("phone = ?", phone).First(&u).Error
 	//err := dao.db.WithContext(ctx).First(&u, "email = ?", email).Error
 	return u, err
 }

@@ -3,8 +3,8 @@ package repository
 import (
 	"context"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/domain"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/repository/cache"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/repository/dao"
-	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/repository/dao/cache"
 )
 
 type UserRepository struct {
@@ -27,9 +27,32 @@ func (r *UserRepository) FindByEmail(ctx context.Context, email string) (domain.
 	}
 	return domain.User{
 		Id:       u.Id,
+		Phone:    u.Phone,
 		Email:    u.Email,
 		Password: u.Password,
+		Birthday: u.Birthday,
+		Intro:    u.Intro,
+		NickName: u.NickName,
 	}, nil
+}
+
+func (r *UserRepository) FindByPhone(ctx context.Context, phone string) (domain.User, error) {
+	// SELECT * FROM `users` WHERE `phone`=?
+	u, err := r.dao.FindByPhone(ctx, phone)
+	if err != nil {
+		return domain.User{}, err
+	}
+	return domain.User{
+		Id:       u.Id,
+		Phone:    u.Phone,
+		Email:    u.Email,
+		Password: u.Password,
+		Birthday: u.Birthday,
+		Intro:    u.Intro,
+		NickName: u.NickName,
+	}, nil
+
+	// 这里需要写cache吗
 }
 
 func (r *UserRepository) FindById(ctx context.Context, uid int64) (domain.User, error) {
@@ -47,11 +70,12 @@ func (r *UserRepository) FindById(ctx context.Context, uid int64) (domain.User, 
 	}
 	du = domain.User{
 		Id:       u.Id,
+		Phone:    u.Phone,
 		Email:    u.Email,
 		Password: u.Password,
 		Birthday: u.Birthday,
-		NickName: u.NickName,
 		Intro:    u.Intro,
+		NickName: u.NickName,
 	}
 
 	// 写入cache
@@ -68,6 +92,7 @@ func (r *UserRepository) FindById(ctx context.Context, uid int64) (domain.User, 
 }
 func (r *UserRepository) Create(ctx context.Context, u domain.User) error {
 	err := r.dao.Insert(ctx, dao.User{
+		Phone:    u.Phone,
 		Email:    u.Email,
 		Password: u.Password,
 		NickName: u.NickName,
@@ -77,11 +102,6 @@ func (r *UserRepository) Create(ctx context.Context, u domain.User) error {
 	if err != nil {
 		return err
 	}
-
-	// 写入cache
-	go func() {
-		r.cache.Set(ctx, u)
-	}()
 
 	return err
 }

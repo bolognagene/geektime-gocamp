@@ -3,6 +3,8 @@ module github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook
 go 1.20
 
 require (
+	github.com/cloopen/go-sms-sdk v0.0.0-20200702015230-7c5619f80c9e
+	github.com/coocood/freecache v1.2.3
 	github.com/dlclark/regexp2 v1.10.0
 	github.com/gin-contrib/cors v1.4.0
 	github.com/gin-contrib/sessions v0.0.5

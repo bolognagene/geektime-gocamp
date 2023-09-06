@@ -20,9 +20,9 @@ func NewUserService(repo *repository.UserRepository) *UserService {
 	}
 }
 
-func (svc *UserService) Login(ctx context.Context, email, password string) (domain.User, error) {
+func (svc *UserService) Login(ctx context.Context, phone, password string) (domain.User, error) {
 	// 先找用户
-	u, err := svc.repo.FindByEmail(ctx, email)
+	u, err := svc.repo.FindByPhone(ctx, phone)
 	if err == ErrUserNotFound {
 		return domain.User{}, ErrInvalidUserOrPassword
 	}
@@ -79,6 +79,15 @@ func (svc *UserService) ProfileJWT(ctx *gin.Context) (domain.User, error) {
 
 	return u, nil
 
+}
+
+func (svc *UserService) FindByPhone(ctx context.Context, phone string) (domain.User, error) {
+	du, err := svc.repo.FindByPhone(ctx, phone)
+	if err != nil {
+		return domain.User{}, err
+	}
+
+	return du, nil
 }
 
 // 用JWT的方式来取user id
