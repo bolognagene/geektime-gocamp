@@ -13,8 +13,8 @@ type CodeCache struct {
 	cache freecache.Cache
 }
 
-func NewCodeCache(cache freecache.Cache) CodeCache {
-	return CodeCache{
+func NewCodeCache(cache freecache.Cache) *CodeCache {
+	return &CodeCache{
 		cache: cache,
 	}
 

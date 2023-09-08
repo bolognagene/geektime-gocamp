@@ -20,9 +20,9 @@ type CodeCache struct {
 	client redis.Cmdable
 }
 
-func NewCodeCache(client redis.Cmdable) CodeCache {
+func NewCodeCache(client redis.Cmdable) *CodeCache {
 	//return &sms.CodeCache{client: client}
-	return CodeCache{
+	return &CodeCache{
 		client: client,
 	}
 }
