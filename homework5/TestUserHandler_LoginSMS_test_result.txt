@@ -1,6 +1,6 @@
-PS C:\Work\IT\GO\src\github.com\bolognagene\geektime-gocamp\geektime-gocamp\webook\webook\internal\web> go test -v -run TestUserHandler_LoginJWT        
-=== RUN   TestUserHandler_LoginJWT 
-=== RUN   TestUserHandler_LoginJWT/登陆成功 
+PS C:\Work\IT\GO\src\github.com\bolognagene\geektime-gocamp\geektime-gocamp\webook\webook\internal\web> go test -v -run TestUserHandler_LoginSMS        
+=== RUN   TestUserHandler_LoginSMS 
+=== RUN   TestUserHandler_LoginSMS/验证码校验通过 
 [GIN-debug] [WARNING] Creating an Engine instance with the Logger and Recovery middleware already attached.
 
 [GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
@@ -23,8 +23,8 @@ oginSMSCode-fm (3 handlers)
 MS-fm (3 handlers)
 [GIN-debug] POST   /users/refresh_token      --> github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web.(*UserHandler).Refres
 hToken-fm (3 handlers)
-[GIN] 2023/09/19 - 11:06:59 | 200 |       996.2µs |                 | POST     "/users/login"                                   
-=== RUN   TestUserHandler_LoginJWT/设置token系统错误
+[GIN] 2023/09/19 - 12:07:47 | 200 |            0s |                 | POST     "/users/login_sms"                               
+=== RUN   TestUserHandler_LoginSMS/参数不对，bind_失败
 [GIN-debug] [WARNING] Creating an Engine instance with the Logger and Recovery middleware already attached.
 
 [GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
@@ -47,32 +47,8 @@ oginSMSCode-fm (3 handlers)
 MS-fm (3 handlers)
 [GIN-debug] POST   /users/refresh_token      --> github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web.(*UserHandler).Refres
 hToken-fm (3 handlers)
-[GIN] 2023/09/19 - 11:06:59 | 200 |            0s |                 | POST     "/users/login"                                   
-=== RUN   TestUserHandler_LoginJWT/登陆系统错误
-[GIN-debug] [WARNING] Creating an Engine instance with the Logger and Recovery middleware already attached.
-
-[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production. 
- - using env:   export GIN_MODE=release
- - using code:  gin.SetMode(gin.ReleaseMode)
-
-[GIN-debug] GET    /users/profile            --> github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web.(*UserHandler).Profil
-eJWT-fm (3 handlers)
-[GIN-debug] POST   /users/signup             --> github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web.(*UserHandler).SignUp
--fm (3 handlers)
-[GIN-debug] POST   /users/login              --> github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web.(*UserHandler).LoginJ
-WT-fm (3 handlers)
-[GIN-debug] POST   /users/logout             --> github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web.(*UserHandler).Logout
-JWT-fm (3 handlers)
-[GIN-debug] POST   /users/edit               --> github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web.(*UserHandler).Edit-f
-m (3 handlers)
-[GIN-debug] POST   /users/login_sms/code/send --> github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web.(*UserHandler).SendL
-oginSMSCode-fm (3 handlers)
-[GIN-debug] POST   /users/login_sms          --> github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web.(*UserHandler).LoginS
-MS-fm (3 handlers)
-[GIN-debug] POST   /users/refresh_token      --> github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web.(*UserHandler).Refres
-hToken-fm (3 handlers)
-[GIN] 2023/09/19 - 11:06:59 | 200 |            0s |                 | POST     "/users/login"                                   
-=== RUN   TestUserHandler_LoginJWT/登陆用户名或密码不对
+[GIN] 2023/09/19 - 12:07:47 | 400 |       502.9µs |                 | POST     "/users/login_sms" 
+=== RUN   TestUserHandler_LoginSMS/设置token系统错误
 [GIN-debug] [WARNING] Creating an Engine instance with the Logger and Recovery middleware already attached.
 
 [GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
@@ -95,12 +71,86 @@ oginSMSCode-fm (3 handlers)
 MS-fm (3 handlers)
 [GIN-debug] POST   /users/refresh_token      --> github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web.(*UserHandler).Refres
 hToken-fm (3 handlers)
-[GIN] 2023/09/19 - 11:06:59 | 200 |            0s |                 | POST     "/users/login"                                   
---- PASS: TestUserHandler_LoginJWT (0.04s)
-    --- PASS: TestUserHandler_LoginJWT/登陆成功 (0.01s)
-    --- PASS: TestUserHandler_LoginJWT/设置token系统错误 (0.01s)
-    --- PASS: TestUserHandler_LoginJWT/登陆系统错误 (0.00s)
-    --- PASS: TestUserHandler_LoginJWT/登陆用户名或密码不对 (0.02s)
+[GIN] 2023/09/19 - 12:07:47 | 200 |            0s |                 | POST     "/users/login_sms"                               
+=== RUN   TestUserHandler_LoginSMS/FindOrCreate系统错误
+[GIN-debug] [WARNING] Creating an Engine instance with the Logger and Recovery middleware already attached.
+
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:   export GIN_MODE=release
+ - using code:  gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /users/profile            --> github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web.(*UserHandler).Profil
+eJWT-fm (3 handlers)
+[GIN-debug] POST   /users/signup             --> github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web.(*UserHandler).SignUp
+-fm (3 handlers)
+[GIN-debug] POST   /users/login              --> github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web.(*UserHandler).LoginJ
+WT-fm (3 handlers)
+[GIN-debug] POST   /users/logout             --> github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web.(*UserHandler).Logout
+JWT-fm (3 handlers)
+[GIN-debug] POST   /users/edit               --> github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web.(*UserHandler).Edit-f
+m (3 handlers)
+[GIN-debug] POST   /users/login_sms/code/send --> github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web.(*UserHandler).SendL
+oginSMSCode-fm (3 handlers)
+[GIN-debug] POST   /users/login_sms          --> github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web.(*UserHandler).LoginS
+MS-fm (3 handlers)
+[GIN-debug] POST   /users/refresh_token      --> github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web.(*UserHandler).Refres
+hToken-fm (3 handlers)
+[GIN] 2023/09/19 - 12:07:47 | 200 |            0s |                 | POST     "/users/login_sms"                               
+=== RUN   TestUserHandler_LoginSMS/验证码有误
+[GIN-debug] [WARNING] Creating an Engine instance with the Logger and Recovery middleware already attached.
+
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:   export GIN_MODE=release
+ - using code:  gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /users/profile            --> github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web.(*UserHandler).Profil
+eJWT-fm (3 handlers)
+[GIN-debug] POST   /users/signup             --> github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web.(*UserHandler).SignUp
+-fm (3 handlers)
+[GIN-debug] POST   /users/login              --> github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web.(*UserHandler).LoginJ
+WT-fm (3 handlers)
+[GIN-debug] POST   /users/logout             --> github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web.(*UserHandler).Logout
+JWT-fm (3 handlers)
+[GIN-debug] POST   /users/edit               --> github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web.(*UserHandler).Edit-f
+m (3 handlers)
+[GIN-debug] POST   /users/login_sms/code/send --> github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web.(*UserHandler).SendL
+oginSMSCode-fm (3 handlers)
+[GIN-debug] POST   /users/login_sms          --> github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web.(*UserHandler).LoginS
+MS-fm (3 handlers)
+[GIN-debug] POST   /users/refresh_token      --> github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web.(*UserHandler).Refres
+hToken-fm (3 handlers)
+[GIN] 2023/09/19 - 12:07:47 | 200 |            0s |                 | POST     "/users/login_sms"                               
+=== RUN   TestUserHandler_LoginSMS/Verify系统错误
+[GIN-debug] [WARNING] Creating an Engine instance with the Logger and Recovery middleware already attached.
+
+[GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+ - using env:   export GIN_MODE=release
+ - using code:  gin.SetMode(gin.ReleaseMode)
+
+[GIN-debug] GET    /users/profile            --> github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web.(*UserHandler).Profil
+eJWT-fm (3 handlers)
+[GIN-debug] POST   /users/signup             --> github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web.(*UserHandler).SignUp
+-fm (3 handlers)
+[GIN-debug] POST   /users/login              --> github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web.(*UserHandler).LoginJ
+WT-fm (3 handlers)
+[GIN-debug] POST   /users/logout             --> github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web.(*UserHandler).Logout
+JWT-fm (3 handlers)
+[GIN-debug] POST   /users/edit               --> github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web.(*UserHandler).Edit-f
+m (3 handlers)
+[GIN-debug] POST   /users/login_sms/code/send --> github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web.(*UserHandler).SendL
+oginSMSCode-fm (3 handlers)
+[GIN-debug] POST   /users/login_sms          --> github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web.(*UserHandler).LoginS
+MS-fm (3 handlers)
+[GIN-debug] POST   /users/refresh_token      --> github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web.(*UserHandler).Refres
+hToken-fm (3 handlers)
+[GIN] 2023/09/19 - 12:07:47 | 200 |            0s |                 | POST     "/users/login_sms"                               
+--- PASS: TestUserHandler_LoginSMS (0.02s)
+    --- PASS: TestUserHandler_LoginSMS/验证码校验通过 (0.01s)
+    --- PASS: TestUserHandler_LoginSMS/参数不对，bind_失败 (0.00s)
+    --- PASS: TestUserHandler_LoginSMS/设置token系统错误 (0.00s)
+    --- PASS: TestUserHandler_LoginSMS/FindOrCreate系统错误 (0.00s)
+    --- PASS: TestUserHandler_LoginSMS/验证码有误 (0.00s)
+    --- PASS: TestUserHandler_LoginSMS/Verify系统错误 (0.00s)
 PASS
-ok      github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web       0.208s
+ok      github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web       0.167s
 PS C:\Work\IT\GO\src\github.com\bolognagene\geektime-gocamp\geektime-gocamp\webook\webook\internal\web>
