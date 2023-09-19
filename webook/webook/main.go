@@ -6,11 +6,18 @@ import (
 )
 
 func main() {
+	//db := initDB()
+	//rdb := initRedis()
+	//
+	//server := initWebServer()
+	//
+	//u := initUser(db, rdb)
+	//u.RegisterRoutes(server)
 
-	server := initWebServer()
+	server := InitWebServer()
 
 	server.GET("/hello", func(ctx *gin.Context) {
-		ctx.String(http.StatusOK, "你好，帅气的你来了")
+		ctx.String(http.StatusOK, "你好，你来了")
 	})
 
 	server.Run(":8077")

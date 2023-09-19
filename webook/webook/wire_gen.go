@@ -7,30 +7,35 @@
 package main
 
 import (
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository/cache"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository/dao"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/service"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web/jwt"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/ioc"
-	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/repository"
-	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/repository/cache"
-	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/repository/dao"
-	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/service"
-	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/web"
 	"github.com/gin-gonic/gin"
 )
 
 // Injectors from wire.go:
 
-func initWebServer() *gin.Engine {
+func InitWebServer() *gin.Engine {
 	cmdable := ioc.InitRedis()
-	v := ioc.InitMiddlewares(cmdable)
+	handler := jwt.NewRedisJWTHandler(cmdable)
+	v := ioc.InitMiddlewares(cmdable, handler)
 	db := ioc.InitDB()
 	userDAO := dao.NewUserDAO(db)
 	userCache := cache.NewUserCache(cmdable)
 	userRepository := repository.NewUserRepository(userDAO, userCache)
 	userService := service.NewUserService(userRepository)
-	codeCache := ioc.InitSMSCodeRedisCache(cmdable)
-	smsCodeRepository := repository.NewSMSCodeRepository(codeCache)
-	smsService := ioc.InitMemorySMSService()
-	smsCodeService := service.NewSMSCodeService(smsCodeRepository, smsService)
-	userHandler := web.NewUserHandler(userService, smsCodeService)
-	engine := ioc.InitWebServer(v, userHandler)
+	codeCache := cache.NewCodeCache(cmdable)
+	codeRepository := repository.NewCodeRepository(codeCache)
+	smsService := ioc.InitSMSService(cmdable)
+	codeService := service.NewCodeService(codeRepository, smsService)
+	userHandler := web.NewUserHandler(userService, codeService, handler)
+	wechatService := ioc.InitWechatService()
+	wechatHandlerConfig := ioc.NewWechatHandlerConfig()
+	oAuth2WechatHandler := web.NewOAuth2WechatHandler(wechatService, userService, handler, wechatHandlerConfig)
+	engine := ioc.InitWebServer(v, userHandler, oAuth2WechatHandler)
 	return engine
 }

@@ -9,6 +9,10 @@ func InitRedis() redis.Cmdable {
 	redisClient := redis.NewClient(&redis.Options{
 		Addr: config.Config.Redis.Addr,
 	})
-
 	return redisClient
 }
+
+//
+//func NewRateLimiter() redis.Limiter {
+//
+//}

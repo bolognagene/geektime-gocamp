@@ -2,7 +2,7 @@ package ioc
 
 import (
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/config"
-	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/repository/dao"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository/dao"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
