@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	mysms "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/service/sms"
-	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/pkg/ratelimit"
 	"github.com/ecodeclub/ekit"
 	"github.com/ecodeclub/ekit/slice"
 	sms "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/sms/v20210111"
@@ -14,16 +13,14 @@ type Service struct {
 	appId    *string
 	signName *string
 	client   *sms.Client
-	limiter  ratelimit.Limiter
 }
 
-func NewService(client *sms.Client, appId string,
-	signName string, limiter ratelimit.Limiter) *Service {
+func NewService(appId string, signName string,
+	client *sms.Client) *Service {
 	return &Service{
-		client:   client,
 		appId:    ekit.ToPtr[string](appId),
 		signName: ekit.ToPtr[string](signName),
-		limiter:  limiter,
+		client:   client,
 	}
 }
 

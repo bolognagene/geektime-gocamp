@@ -1,0 +1,22 @@
+# pvc => PersistentVolumeClaim
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+#  这个是指我 mysql 要用的东西
+  name: wb-mysql-claim
+spec:
+#   这个可以随便
+  storageClassName: k8s-storage-1
+  accessModes:
+#    一个POD读写，这里需要好好看看
+    - ReadWriteOnce
+#    多个读，一个写
+#    - ReadOnlyMany
+#    - 多个读写
+#    - ReadWriteMany
+  resources:
+    requests:
+#      1 GB
+      storage: 512Mi
+
+  

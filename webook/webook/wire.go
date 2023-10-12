@@ -21,12 +21,14 @@ func InitWebServer() *gin.Engine {
 
 		// 初始化 DAO
 		dao.NewUserDAO,
+		dao.NewSMSDAO,
 
 		cache.NewUserCache,
 		cache.NewCodeCache,
 
 		repository.NewUserRepository,
 		repository.NewCodeRepository,
+		repository.NewSMSAsyncRepository,
 
 		service.NewUserService,
 		service.NewCodeService,

@@ -1,0 +1,50 @@
+package async
+
+import (
+	"context"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/service/sms"
+	"strings"
+)
+
+type SMSAsyncService struct {
+	svcs []sms.Service
+	repo repository.SMSAsyncRepository
+}
+
+func NewSMSAsyncService(svcs []sms.Service, repo repository.SMSAsyncRepository) *SMSAsyncService {
+	return &SMSAsyncService{svcs: svcs, repo: repo}
+}
+
+func (s *SMSAsyncService) SendAsync(ctx context.Context, idx int32) {
+	go func() {
+		smsAsyncs, err := s.repo.FindAll(ctx)
+		if err != nil {
+			return
+		}
+		for _, smsAsync := range smsAsyncs {
+			// 在这里发送，并且控制重试
+			var nums []string
+			numbers := strings.Split(smsAsync.Numbers, ";")
+			for _, number := range numbers {
+				nums = append(nums, number)
+			}
+
+			s.svcs[idx].Send(ctx, smsAsync.Biz, strings.Split(smsAsync.Args, "###"),
+				nums...)
+		}
+	}()
+}
+
+func (s *SMSAsyncService) Send(ctx context.Context, biz string, args []string, numbers ...string) error {
+	// 首先是正常路径
+	err := s.svc.Send(ctx, biz, args, numbers...)
+	if err != nil {
+		// 判定是不是崩溃了
+
+		if 崩溃了 {
+			s.repo.Store()
+		}
+	}
+	return
+}
