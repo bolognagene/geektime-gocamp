@@ -5,6 +5,8 @@ import (
 	"errors"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/domain"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/pkg/logger"
+	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -21,12 +23,22 @@ type UserService interface {
 
 type userService struct {
 	repo repository.UserRepository
+	l    logger.LoggerV1
 }
 
 // NewUserService 我用的人，只管用，怎么初始化我不管，我一点都不关心如何初始化
-func NewUserService(repo repository.UserRepository) UserService {
+func NewUserService(repo repository.UserRepository, l logger.LoggerV1) UserService {
 	return &userService{
 		repo: repo,
+		l:    l,
+	}
+}
+
+func NewUserServiceV1(repo repository.UserRepository, l *zap.Logger) UserService {
+	return &userService{
+		repo: repo,
+		// 预留了变化空间
+		//logger: zap.L(),
 	}
 }
 
@@ -79,6 +91,11 @@ func (svc *userService) FindOrCreate(ctx context.Context,
 		// 不为 ErrUserNotFound 的也会进来这里
 		return u, err
 	}
+	// 这里，把 phone 脱敏之后打出来
+	//zap.L().Info("用户未注册", zap.String("phone", phone))
+	//svc.logger.Info("用户未注册", zap.String("phone", phone))
+	svc.l.Info("用户未注册", logger.String("phone", phone))
+	//loggerxx.Logger.Info("用户未注册", zap.String("phone", phone))
 	// 在系统资源不足，触发降级之后，不执行慢路径了
 	//if ctx.Value("降级") == "true" {
 	//	return domain.User{}, errors.New("系统降级了")

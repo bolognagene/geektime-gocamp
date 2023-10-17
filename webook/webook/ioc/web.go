@@ -1,9 +1,12 @@
 package ioc
 
 import (
+	"context"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web"
 	ijwt "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web/jwt"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web/middleware"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/pkg/ginx/middlewares/logger"
+	logger2 "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/pkg/logger"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
@@ -20,9 +23,17 @@ func InitWebServer(mdls []gin.HandlerFunc, userHdl *web.UserHandler,
 	return server
 }
 
-func InitMiddlewares(redisClient redis.Cmdable, jwtHdl ijwt.Handler) []gin.HandlerFunc {
+func InitMiddlewares(redisClient redis.Cmdable,
+	l logger2.LoggerV1,
+	jwtHdl ijwt.Handler) []gin.HandlerFunc {
+	// 打印出请求和相应的body的中间件
+	bd := logger.NewBuilder(func(ctx context.Context, al *logger.AccessLog) {
+		l.Debug("HTTP请求", logger2.Field{Key: "al", Value: al})
+	}).AllowReqBody(true).AllowRespBody()
+
 	return []gin.HandlerFunc{
 		corsHdl(),
+		bd.Build(),
 		middleware.NewLoginJWTMiddlewareBuilder(jwtHdl).
 			IgnorePaths("/users/signup").
 			IgnorePaths("/users/refresh_token").

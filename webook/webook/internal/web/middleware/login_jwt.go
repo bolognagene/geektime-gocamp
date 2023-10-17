@@ -49,7 +49,7 @@ func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
 		//	// 过期了
 		//}
 		// err 为 nil，token 不为 nil
-		if token == nil || !token.Valid || claims.Uid == 0 {
+		if token == nil || !token.Valid || claims.Id == 0 {
 			// 没登录
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
@@ -91,6 +91,6 @@ func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
 		//	ctx.Header("x-jwt-token", tokenStr)
 		//}
 		ctx.Set("claims", claims)
-		//ctx.Set("userId", claims.Uid)
+		//ctx.Set("userId", claims.Id)
 	}
 }
