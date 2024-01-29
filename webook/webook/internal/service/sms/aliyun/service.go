@@ -2,64 +2,88 @@ package aliyun
 
 import (
 	"context"
-	"errors"
+	"encoding/json"
 	"fmt"
-	sms "github.com/alibabacloud-go/dysmsapi-20170525/v2/client"
-	"github.com/ecodeclub/ekit"
-	"github.com/goccy/go-json"
-	"math/rand"
-	"time"
+	"github.com/aliyun/alibaba-cloud-sdk-go/services/dysmsapi"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/service/sms"
+	"strconv"
+	"strings"
 )
 
-/**
-   @author：biguanqun
-   @since： 2023/8/20
-   @desc：
-**/
-
 type Service struct {
-	client *sms.Client
+	client   *dysmsapi.Client
+	signName string
 }
 
-func NewService(client *sms.Client) *Service {
+func NewService(c *dysmsapi.Client, signName string) *Service {
 	return &Service{
-		client: client,
+		client:   c,
+		signName: signName,
 	}
 }
 
-// SendSms 单次
-func (s *Service) SendSms(ctx context.Context, signName, tplCode string, phone []string) error {
-	phoneLen := len(phone)
+func (s *Service) SendV1(ctx context.Context, tplId string, args []string, numbers ...string) error {
+	req := dysmsapi.CreateSendSmsRequest()
+	req.Scheme = "https"
+	// 阿里云多个手机号为字符串逗号间隔
+	req.PhoneNumbers = strings.Join(numbers, ",")
+	req.SignName = s.signName
+	// 传的是 JSON
+	argsMap := make(map[string]string, len(args))
+	for idx, arg := range args {
+		argsMap[strconv.Itoa(idx)] = arg
+	}
+	// 这意味着，你的模板必须是 你的短信验证码是{0}
+	// 你的短信验证码是{code}
+	bCode, err := json.Marshal(argsMap)
+	if err != nil {
+		return err
+	}
+	req.TemplateParam = string(bCode)
+	req.TemplateCode = tplId
 
-	// phone1 phone2
-	//    0     1
-	for i := 0; i < phoneLen; i++ {
-		phoneSignle := phone[i]
+	var resp *dysmsapi.SendSmsResponse
+	resp, err = s.client.SendSms(req)
+	if err != nil {
+		return err
+	}
 
-		// 1. 生成验证码
-		code := fmt.Sprintf("%06v",
-			rand.New(rand.NewSource(time.Now().UnixNano())).Int31n(1000000))
+	if resp.Code != "OK" {
+		return fmt.Errorf("发送失败，code: %s, 原因：%s",
+			resp.Code, resp.Message)
+	}
+	return nil
+}
 
-		// 完全没有做成一个独立的发短信的实现。而是一个强耦合验证码的实现。
-		bcode, _ := json.Marshal(map[string]interface{}{
-			"code": code,
-		})
+func (s *Service) Send(ctx context.Context, tplId string, args []sms.NamedArg, numbers ...string) error {
+	req := dysmsapi.CreateSendSmsRequest()
+	req.Scheme = "https"
+	// 阿里云多个手机号为字符串逗号间隔
+	req.PhoneNumbers = strings.Join(numbers, ",")
+	req.SignName = s.signName
+	// 传的是 JSON
+	argsMap := make(map[string]string, len(args))
+	for _, arg := range args {
+		argsMap[arg.Name] = arg.Val
+	}
+	// 这意味着，你的模板必须是 你的短信验证码是{0}
+	// 你的短信验证码是{code}
+	bCode, err := json.Marshal(argsMap)
+	if err != nil {
+		return err
+	}
+	req.TemplateParam = string(bCode)
+	req.TemplateCode = tplId
 
-		// 2. 初始化短信结构体
-		smsRequest := &sms.SendSmsRequest{
-			SignName:      ekit.ToPtr[string](signName),
-			TemplateCode:  ekit.ToPtr[string](tplCode),
-			PhoneNumbers:  ekit.ToPtr[string](phoneSignle),
-			TemplateParam: ekit.ToPtr[string](string(bcode)),
-		}
+	var resp *dysmsapi.SendSmsResponse
+	resp, err = s.client.SendSms(req)
+	if err != nil {
+		return err
+	}
 
-		// 3. 发送短信
-		smsResponse, _ := s.client.SendSms(smsRequest)
-		if *smsResponse.Body.Code == "OK" {
-			fmt.Println(phoneSignle, string(bcode))
-			fmt.Printf("发送手机号: %s 的短信成功,验证码为【%s】\n", phoneSignle, code)
-		}
-		fmt.Println(errors.New(*smsResponse.Body.Message))
+	if resp.Code != "OK" {
+		return fmt.Errorf("发送失败，code: %s, 原因：%s",
+			resp.Code, resp.Message)
 	}
 	return nil
 }

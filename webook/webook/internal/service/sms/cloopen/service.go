@@ -5,6 +5,8 @@ package cloopen
 import (
 	"context"
 	"fmt"
+	mysms "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/service/sms"
+	"github.com/ecodeclub/ekit/slice"
 	"log"
 
 	"github.com/cloopen/go-sms-sdk/cloopen"
@@ -22,14 +24,16 @@ func NewService(c *cloopen.SMS, addId string) *Service {
 	}
 }
 
-func (s *Service) Send(ctx context.Context, tplId string, data []string, numbers ...string) error {
+func (s *Service) Send(ctx context.Context, tplId string, args []mysms.NamedArg, numbers ...string) error {
 	input := &cloopen.SendRequest{
 		// 应用的APPID
 		AppId: s.appId,
 		// 模版ID
 		TemplateId: tplId,
 		// 模版变量内容 非必填
-		Datas: data,
+		Datas: slice.Map[mysms.NamedArg, string](args, func(idx int, src mysms.NamedArg) string {
+			return src.Val
+		}),
 	}
 
 	for _, number := range numbers {

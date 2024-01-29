@@ -1,31 +1,28 @@
 package middleware
 
 import (
-	ijwt "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web/jwt"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"net/http"
+	"strings"
 )
 
-// LoginJWTMiddlewareBuilder JWT 登录校验
+// 用JWT的方式登录校验
 type LoginJWTMiddlewareBuilder struct {
 	paths []string
-	ijwt.Handler
 }
 
-func NewLoginJWTMiddlewareBuilder(jwtHdl ijwt.Handler) *LoginJWTMiddlewareBuilder {
-	return &LoginJWTMiddlewareBuilder{
-		Handler: jwtHdl,
-	}
+func NewLoginJWTMiddlewareBuilder() *LoginJWTMiddlewareBuilder {
+	return &LoginJWTMiddlewareBuilder{}
 }
 
-func (l *LoginJWTMiddlewareBuilder) IgnorePaths(path string) *LoginJWTMiddlewareBuilder {
+func (l *LoginJWTMiddlewareBuilder) IgnorePath(path string) *LoginJWTMiddlewareBuilder {
 	l.paths = append(l.paths, path)
 	return l
 }
 
 func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
-	// 用 Go 的方式编码解码
 	return func(ctx *gin.Context) {
 		// 不需要登录校验的
 		for _, path := range l.paths {
@@ -34,63 +31,48 @@ func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
 			}
 		}
 
-		tokenStr := l.ExtractToken(ctx)
-		claims := &ijwt.UserClaims{}
-		// ParseWithClaims 里面，一定要传入指针
+		// 用JWT的方式来校验
+		// 得到请求头里的Authorization， 一般是 Bearer *****的格式
+		tokenHeader := ctx.GetHeader("Authorization")
+		if tokenHeader == "" {
+			// 没登录
+			ctx.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+		// 如果有，则解析出token 数据
+		segs := strings.Split(tokenHeader, " ")
+		if len(segs) != 2 {
+			ctx.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
+		tokenStr := segs[1]
+		// 这里定义claims为指针，因为ParseWithClaims函数需要修改这个claims
+		claims := &web.UserClaims{}
 		token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
-			return []byte("95osj3fUD7fo0mlYdDbncXz4VD2igvf0"), nil
+			return []byte("TXqESPLch4roEwRPzo0WOkvGhpW4y0FU"), nil
 		})
 		if err != nil {
 			// 没登录
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
-		//claims.ExpiresAt.Time.Before(time.Now()) {
-		//	// 过期了
-		//}
+
+		if claims.UserAgent != ctx.Request.UserAgent() {
+			// UserAgent不一致，有安全隐患，需要重新登录
+			// 加监控
+			ctx.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
 		// err 为 nil，token 不为 nil
-		if token == nil || !token.Valid || claims.Id == 0 {
+		if token == nil || !token.Valid || claims.Uid == 0 {
 			// 没登录
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
-		if claims.UserAgent != ctx.Request.UserAgent() {
-			// 严重的安全问题
-			// 你是要监控
-			ctx.AbortWithStatus(http.StatusUnauthorized)
-			return
-		}
 
-		err = l.CheckSession(ctx, claims.Ssid)
-		if err != nil {
-			// 要么 redis 有问题，要么已经退出登录
-			ctx.AbortWithStatus(http.StatusUnauthorized)
-			return
-		}
-
-		// 你以为的退出登录，没有用的
-		//token.Valid = false
-		//// tokenStr 是一个新的字符串
-		//tokenStr, err = token.SignedString([]byte("95osj3fUD7fo0mlYdDbncXz4VD2igvf0"))
-		//if err != nil {
-		//	// 记录日志
-		//	log.Println("jwt 续约失败", err)
-		//}
-		//ctx.Header("x-jwt-token", tokenStr)
-
-		// 短的 token 过期了，搞个新的
-		//now := time.Now()
-		// 每十秒钟刷新一次
-		//if claims.ExpiresAt.Sub(now) < time.Second*50 {
-		//	claims.ExpiresAt = jwt.NewNumericDate(time.Now().Add(time.Minute))
-		//	tokenStr, err = token.SignedString([]byte("95osj3fUD7fo0mlYdDbncXz4VD2igvf0"))
-		//	if err != nil {
-		//		// 记录日志
-		//		log.Println("jwt 续约失败", err)
-		//	}
-		//	ctx.Header("x-jwt-token", tokenStr)
-		//}
+		// JWT 方式需要将claims存到context里，供后续调用
 		ctx.Set("claims", claims)
-		//ctx.Set("userId", claims.Id)
 	}
 }

@@ -1,74 +1,29 @@
 package service
 
 import (
-	"context"
 	"errors"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/domain"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository"
-	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/pkg/logger"
-	"go.uber.org/zap"
+	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 )
 
-var ErrUserDuplicateEmail = repository.ErrUserDuplicate
-var ErrInvalidUserOrPassword = errors.New("账号/邮箱或密码不对")
+var (
+	ErrUserDuplicatePhone    = repository.ErrUserDuplicatePhone
+	ErrInvalidUserOrPassword = errors.New("账号/邮箱或密码不对")
+)
 
-type UserService interface {
-	Login(ctx context.Context, email, password string) (domain.User, error)
-	SignUp(ctx context.Context, u domain.User) error
-	FindOrCreate(ctx context.Context, phone string) (domain.User, error)
-	FindOrCreateByWechat(ctx context.Context, wechatInfo domain.WechatInfo) (domain.User, error)
-	Profile(ctx context.Context, id int64) (domain.User, error)
+type UserService struct {
+	repo *repository.UserRepository
 }
 
-type userService struct {
-	repo repository.UserRepository
-	l    logger.LoggerV1
-}
-
-// NewUserService 我用的人，只管用，怎么初始化我不管，我一点都不关心如何初始化
-func NewUserService(repo repository.UserRepository, l logger.LoggerV1) UserService {
-	return &userService{
+func NewUserService(repo *repository.UserRepository) *UserService {
+	return &UserService{
 		repo: repo,
-		l:    l,
 	}
 }
 
-func NewUserServiceV1(repo repository.UserRepository, l *zap.Logger) UserService {
-	return &userService{
-		repo: repo,
-		// 预留了变化空间
-		//logger: zap.L(),
-	}
-}
-
-//func NewUserServiceV1(f repository.UserRepositoryFactory) UserService {
-//	return &userService{
-//		// 我在这里，不同的 factory，会创建出来不同实现
-//		repo: f.NewRepo(),
-//	}
-//}
-
-func (svc *userService) Login(ctx context.Context, email, password string) (domain.User, error) {
-	// 先找用户
-	u, err := svc.repo.FindByEmail(ctx, email)
-	if err == repository.ErrUserNotFound {
-		return domain.User{}, ErrInvalidUserOrPassword
-	}
-	if err != nil {
-		return domain.User{}, err
-	}
-	// 比较密码了
-	err = bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password))
-	if err != nil {
-		// DEBUG
-		return domain.User{}, ErrInvalidUserOrPassword
-	}
-
-	return u, nil
-}
-
-func (svc *userService) SignUp(ctx context.Context, u domain.User) error {
+func (s *UserService) SignUp(ctx *gin.Context, u domain.User) error {
 	// 你要考虑加密放在哪里的问题了
 	hash, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
 	if err != nil {
@@ -76,70 +31,77 @@ func (svc *userService) SignUp(ctx context.Context, u domain.User) error {
 	}
 	u.Password = string(hash)
 	// 然后就是，存起来
-	return svc.repo.Create(ctx, u)
+	return s.repo.Create(ctx, u)
 }
 
-func (svc *userService) FindOrCreate(ctx context.Context,
-	phone string) (domain.User, error) {
-	// 这时候，这个地方要怎么办？
+func (s *UserService) FindOrCreate(ctx *gin.Context, u domain.User) (domain.User, error) {
 	// 这个叫做快路径
-	u, err := svc.repo.FindByPhone(ctx, phone)
-	// 要判断，有咩有这个用户
-	if err != repository.ErrUserNotFound {
+	user, err := s.repo.FindByPhone(ctx, u)
+	if err != repository.ErrUserNotFound && user.Id != 0 {
 		// 绝大部分请求进来这里
 		// nil 会进来这里
 		// 不为 ErrUserNotFound 的也会进来这里
-		return u, err
+		return user, err
 	}
-	// 这里，把 phone 脱敏之后打出来
-	//zap.L().Info("用户未注册", zap.String("phone", phone))
-	//svc.logger.Info("用户未注册", zap.String("phone", phone))
-	svc.l.Info("用户未注册", logger.String("phone", phone))
-	//loggerxx.Logger.Info("用户未注册", zap.String("phone", phone))
+
 	// 在系统资源不足，触发降级之后，不执行慢路径了
 	//if ctx.Value("降级") == "true" {
 	//	return domain.User{}, errors.New("系统降级了")
 	//}
+
+	// 没有找到，需要创建这个用户
 	// 这个叫做慢路径
-	// 你明确知道，没有这个用户
-	u = domain.User{
-		Phone: phone,
-	}
-	err = svc.repo.Create(ctx, u)
-	if err != nil && err != repository.ErrUserDuplicate {
+	err = s.repo.Create(ctx, u)
+	if err != nil {
 		return u, err
 	}
+
+	// 要得到userId, 所以要重新找一遍
 	// 因为这里会遇到主从延迟的问题
-	return svc.repo.FindByPhone(ctx, phone)
+	return s.repo.FindByPhone(ctx, u)
+
 }
 
-func (svc *userService) FindOrCreateByWechat(ctx context.Context,
-	info domain.WechatInfo) (domain.User, error) {
-	u, err := svc.repo.FindByWechat(ctx, info.OpenID)
-	if err != repository.ErrUserNotFound {
-		return u, err
+func (s *UserService) Login(ctx *gin.Context, u domain.User) (domain.User, error) {
+	user, err := s.repo.FindByPhone(ctx, u)
+	if err == repository.ErrUserNotFound {
+		return domain.User{}, ErrInvalidUserOrPassword
 	}
-	u = domain.User{
-		WechatInfo: info,
+	if err != nil {
+		return domain.User{}, err
 	}
-	err = svc.repo.Create(ctx, u)
-	if err != nil && err != repository.ErrUserDuplicate {
-		return u, err
+
+	// 比较密码了
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(u.Password))
+	if err != nil {
+		// 这里可以加入DEBUG信息
+		return domain.User{}, ErrInvalidUserOrPassword
 	}
-	// 因为这里会遇到主从延迟的问题
-	return svc.repo.FindByWechat(ctx, info.OpenID)
+	return user, nil
 }
 
-func (svc *userService) Profile(ctx context.Context,
-	id int64) (domain.User, error) {
-	u, err := svc.repo.FindById(ctx, id)
-	return u, err
+func (s *UserService) EditProfile(ctx *gin.Context, u domain.User) error {
+
+	return s.repo.UpdateProfile(ctx, u)
 }
 
-func PathsDownGrade(ctx context.Context, quick, slow func()) {
-	quick()
-	if ctx.Value("降级") == "true" {
-		return
+func (s *UserService) EditPassword(ctx *gin.Context, u domain.User) error {
+	// 你要考虑加密放在哪里的问题了
+	hash, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
+	if err != nil {
+		return err
 	}
-	slow()
+	u.Password = string(hash)
+
+	return s.repo.UpdatePassword(ctx, u)
+}
+
+func (s *UserService) Profile(ctx *gin.Context, id int64) (domain.User, error) {
+
+	user, err := s.repo.FindById(ctx, id)
+	if err != nil {
+		return domain.User{}, err
+	}
+
+	return user, nil
 }

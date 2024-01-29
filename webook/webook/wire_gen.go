@@ -12,33 +12,32 @@ import (
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository/dao"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/service"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web"
-	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web/jwt"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/ioc"
 	"github.com/gin-gonic/gin"
+	"time"
 )
 
 // Injectors from wire.go:
 
 func InitWebServer() *gin.Engine {
 	cmdable := ioc.InitRedis()
-	loggerV1 := ioc.InitLogger()
-	handler := jwt.NewRedisJWTHandler(cmdable)
-	v := ioc.InitMiddlewares(cmdable, loggerV1, handler)
+	v := ioc.InitMiddlewares(cmdable)
 	db := ioc.InitDB()
 	userDAO := dao.NewUserDAO(db)
-	userCache := cache.NewUserCache(cmdable)
+	duration := _wireDurationValue
+	userCache := cache.NewUserCache(cmdable, duration)
 	userRepository := repository.NewUserRepository(userDAO, userCache)
-	userService := service.NewUserService(userRepository, loggerV1)
+	userService := service.NewUserService(userRepository)
 	codeCache := cache.NewCodeCache(cmdable)
 	codeRepository := repository.NewCodeRepository(codeCache)
-	smsdao := dao.NewSMSDAO(db)
-	smsAsyncRepository := repository.NewSMSAsyncRepository(smsdao)
-	smsService := ioc.InitSMSService(cmdable, smsAsyncRepository)
+	smsService := ioc.InitSMSService()
 	codeService := service.NewCodeService(codeRepository, smsService)
-	userHandler := web.NewUserHandler(userService, codeService, handler, loggerV1)
-	wechatService := ioc.InitWechatService(loggerV1)
-	wechatHandlerConfig := ioc.NewWechatHandlerConfig()
-	oAuth2WechatHandler := web.NewOAuth2WechatHandler(wechatService, userService, handler, wechatHandlerConfig)
-	engine := ioc.InitWebServer(v, userHandler, oAuth2WechatHandler)
+	userHandler := web.NewUserHandler(userService, codeService)
+	engine := ioc.InitWebServer(v, userHandler)
 	return engine
 }
+
+var (
+	_wireDurationValue = time.Minute *
+		15
+)

@@ -10,9 +10,9 @@ package config
 var Config = config{
 	DB: DBConfig{
 		// 本地连接
-		DSN: "root:root@tcp(192.168.181.129:30002)/webook",
+		DSN: "root:root@tcp(192.168.181.129:13316)/webook",
 	},
 	Redis: RedisConfig{
-		Addr: "192.168.181.129:30003",
+		Addr: "192.168.181.129:6379",
 	},
 }
