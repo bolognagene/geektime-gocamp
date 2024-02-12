@@ -13,13 +13,15 @@ type Service struct {
 	appId    *string
 	signName *string
 	client   *sms.Client
+	vendor   string
 }
 
-func NewService(client *sms.Client, appId string, signName string) *Service {
+func NewService(client *sms.Client, appId string, signName string, vendor string) *Service {
 	return &Service{
 		client:   client,
 		appId:    ekit.ToPtr[string](appId),
 		signName: ekit.ToPtr[string](signName),
+		vendor:   vendor,
 	}
 }
 
@@ -70,4 +72,8 @@ func (s *Service) toStringPtrSlice(src []string) []*string {
 	return slice.Map[string, *string](src, func(idx int, src string) *string {
 		return &src
 	})
+}
+
+func (s *Service) GetVendor() string {
+	return s.vendor
 }

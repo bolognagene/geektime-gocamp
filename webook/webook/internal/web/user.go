@@ -1,31 +1,31 @@
 package web
 
 import (
-	"fmt"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/domain"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/service"
+	myjwt "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web/jwt"
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"net/http"
-	"time"
 )
 
 const biz = "login"
 
 type UserHandler struct {
-	svc         *service.UserService
-	codeSvc     *service.CodeService
+	svc         service.UserService
+	codeSvc     service.CodeService
 	emailExp    *regexp.Regexp
 	passwordExp *regexp.Regexp
 	nickNameExp *regexp.Regexp
 	birthdayExp *regexp.Regexp
 	introExp    *regexp.Regexp
 	phoneExp    *regexp.Regexp
+	myjwt.JwtHandler
 }
 
-func NewUserHandler(svc *service.UserService, codeSvc *service.CodeService) *UserHandler {
+func NewUserHandler(svc service.UserService, codeSvc service.CodeService) *UserHandler {
 	const (
 		emailRegexPattern    = "^\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*$"
 		passwordRegexPattern = `^(?=.*[A-Za-z])(?=.*\d)(?=.*[$@$!%*#?&])[A-Za-z\d$@$!%*#?&]{8,}$`
@@ -62,12 +62,14 @@ func (u *UserHandler) RegisterRoutes(server *gin.Engine) {
 	ug.POST("/signup", u.SignUp)
 	//ug.POST("/login", u.Login)
 	ug.POST("/login", u.LoginByJWT)
+	ug.POST("/logout", u.LogoutByJWT)
 	//ug.POST("/profile/edit", u.EditProfile)
 	ug.POST("/profile/edit", u.EditProfileByJWT)
 	//ug.POST("/edit", u.EditPassword)
 	ug.POST("/edit", u.EditPasswordByJWT)
 	ug.POST("/login_sms/code/send", u.SendLoginSMSCode)
 	ug.POST("/login_sms", u.LoginBySMS)
+	ug.POST("/refresh_token", u.RefreshToken)
 }
 
 func (u *UserHandler) Profile(ctx *gin.Context) {
@@ -85,7 +87,7 @@ func (u *UserHandler) Profile(ctx *gin.Context) {
 }
 
 func (u *UserHandler) ProfileByJWT(ctx *gin.Context) {
-	claims := u.getUserClaim(ctx)
+	claims := u.GetUserClaim(ctx)
 	if claims == nil {
 		ctx.AbortWithStatus(http.StatusUnauthorized)
 		return
@@ -182,7 +184,7 @@ func (u *UserHandler) SignUp(ctx *gin.Context) {
 		Email:    req.Email,
 		Password: req.Password,
 	})
-	if err == service.ErrUserDuplicatePhone {
+	if err == service.ErrUserDuplicate {
 		ctx.JSON(http.StatusOK, Result{
 			Code: 4,
 			Msg:  "电话号码冲突",
@@ -282,7 +284,7 @@ func (u *UserHandler) LoginByJWT(ctx *gin.Context) {
 		return
 	}
 
-	err = u.setJWTToken(ctx, user)
+	err = u.SetLoginToken(ctx, user.Id)
 	if err != nil {
 		ctx.JSON(http.StatusOK, Result{
 			Code: 5,
@@ -293,6 +295,21 @@ func (u *UserHandler) LoginByJWT(ctx *gin.Context) {
 
 	ctx.String(http.StatusOK, "登录成功")
 	return
+}
+
+func (u *UserHandler) LogoutByJWT(ctx *gin.Context) {
+	err := u.ClearToken(ctx)
+	if err != nil {
+		ctx.JSON(http.StatusOK, Result{
+			Code: 5,
+			Msg:  "登出失败",
+		})
+	}
+
+	ctx.JSON(http.StatusOK, Result{
+		Code: 2,
+		Msg:  "登出成功",
+	})
 }
 
 func (u *UserHandler) LoginBySMS(ctx *gin.Context) {
@@ -345,7 +362,7 @@ func (u *UserHandler) LoginBySMS(ctx *gin.Context) {
 		return
 	}
 
-	err = u.setJWTToken(ctx, user)
+	err = u.SetLoginToken(ctx, user.Id)
 	if err != nil {
 		ctx.JSON(http.StatusOK, Result{
 			Code: 5,
@@ -505,7 +522,7 @@ func (u *UserHandler) EditProfileByJWT(ctx *gin.Context) {
 		return
 	}
 
-	claims := u.getUserClaim(ctx)
+	claims := u.GetUserClaim(ctx)
 	if claims == nil {
 		ctx.AbortWithStatus(http.StatusUnauthorized)
 		return
@@ -599,7 +616,7 @@ func (u *UserHandler) EditPasswordByJWT(ctx *gin.Context) {
 		return
 	}
 
-	claims := u.getUserClaim(ctx)
+	claims := u.GetUserClaim(ctx)
 	if claims == nil {
 		ctx.AbortWithStatus(http.StatusUnauthorized)
 		return
@@ -618,48 +635,28 @@ func (u *UserHandler) EditPasswordByJWT(ctx *gin.Context) {
 	return
 }
 
-func (u *UserHandler) getUserClaim(ctx *gin.Context) *UserClaims {
-	// JWT方式
-	c, exist := ctx.Get("claims")
-	if !exist {
-		//ctx.AbortWithStatus(http.StatusUnauthorized)
-		return nil
+func (u *UserHandler) RefreshToken(ctx *gin.Context) {
+	refreshToken := u.ExtractToken(ctx)
+	var rc myjwt.RefreshClaims
+	// 先验证refreshToken
+	token, err := jwt.ParseWithClaims(refreshToken, &rc, func(token *jwt.Token) (interface{}, error) {
+		return u.GetAtKey(ctx), nil
+	})
+	if err != nil || !token.Valid {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
 	}
 
-	// ok 代表是不是 *UserClaims
-	claims, ok := c.(*UserClaims)
-	if !ok {
-		// 你可以考虑监控住这里
-		//ctx.String(http.StatusOK, "系统错误")
-		return nil
+	// 在验证是否登出，看ssid是否在redis里
+	if u.CheckSession(ctx, rc.Ssid) {
+		ctx.AbortWithStatus(http.StatusUnauthorized)
 	}
-	//println(claims.Uid)
-	return claims
-}
 
-func (u *UserHandler) setJWTToken(ctx *gin.Context, user domain.User) error {
-	// JWT方式
-	claims := UserClaims{
-		RegisteredClaims: jwt.RegisteredClaims{
-			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 120)),
-		},
-		Uid:       user.Id,
-		UserAgent: ctx.Request.UserAgent(),
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
-	tokenStr, err := token.SignedString([]byte("TXqESPLch4roEwRPzo0WOkvGhpW4y0FU"))
+	// 搞个新的access_token
+	err = u.SetJWTToken(ctx, rc.Uid, rc.Ssid)
 	if err != nil {
-		return err
+		ctx.AbortWithStatus(http.StatusUnauthorized)
 	}
-	ctx.Header("x-jwt-token", tokenStr)
-	fmt.Println(user)
-	return nil
-}
-
-type UserClaims struct {
-	// Claim必须有这些默认字段
-	jwt.RegisteredClaims
-	// 声明你自己的要放进去 token 里面的数据
-	Uid       int64
-	UserAgent string
+	ctx.JSON(http.StatusOK, Result{
+		Msg: "刷新成功",
+	})
 }

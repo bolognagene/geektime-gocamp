@@ -13,12 +13,14 @@ import (
 type Service struct {
 	client   *dysmsapi.Client
 	signName string
+	vendor   string
 }
 
-func NewService(c *dysmsapi.Client, signName string) *Service {
+func NewService(c *dysmsapi.Client, signName, vendor string) *Service {
 	return &Service{
 		client:   c,
 		signName: signName,
+		vendor:   vendor,
 	}
 }
 
@@ -86,4 +88,8 @@ func (s *Service) Send(ctx context.Context, tplId string, args []sms.NamedArg, n
 			resp.Code, resp.Message)
 	}
 	return nil
+}
+
+func (s *Service) GetVendor() string {
+	return s.vendor
 }

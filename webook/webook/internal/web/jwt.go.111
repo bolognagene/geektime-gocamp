@@ -1,0 +1,62 @@
+package web
+
+import (
+	"fmt"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/domain"
+	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
+	"time"
+)
+
+type JWTHandler struct {
+}
+
+func NewJWTHandler() *JWTHandler {
+	return &JWTHandler{}
+}
+
+func (h *JWTHandler) getUserClaim(ctx *gin.Context) *UserClaims {
+	// JWT方式
+	c, exist := ctx.Get("claims")
+	if !exist {
+		//ctx.AbortWithStatus(http.StatusUnauthorized)
+		return nil
+	}
+
+	// ok 代表是不是 *UserClaims
+	claims, ok := c.(*UserClaims)
+	if !ok {
+		// 你可以考虑监控住这里
+		//ctx.String(http.StatusOK, "系统错误")
+		return nil
+	}
+	//println(claims.Uid)
+	return claims
+}
+
+func (h *JWTHandler) setJWTToken(ctx *gin.Context, user domain.User) error {
+	// JWT方式
+	claims := UserClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Minute * 120)),
+		},
+		Uid:       user.Id,
+		UserAgent: ctx.Request.UserAgent(),
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
+	tokenStr, err := token.SignedString([]byte("TXqESPLch4roEwRPzo0WOkvGhpW4y0FU"))
+	if err != nil {
+		return err
+	}
+	ctx.Header("x-jwt-token", tokenStr)
+	fmt.Println(user)
+	return nil
+}
+
+type UserClaims struct {
+	// Claim必须有这些默认字段
+	jwt.RegisteredClaims
+	// 声明你自己的要放进去 token 里面的数据
+	Uid       int64
+	UserAgent string
+}

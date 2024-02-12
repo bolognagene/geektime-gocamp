@@ -1,6 +1,7 @@
 package dao
 
 import (
+	"database/sql"
 	"errors"
 	"github.com/gin-gonic/gin"
 	"github.com/go-sql-driver/mysql"
@@ -9,30 +10,40 @@ import (
 )
 
 var (
-	ErrUserDuplicatePhone = errors.New("电话号码冲突")
-	ErrUserNotFound       = gorm.ErrRecordNotFound
+	ErrUserDuplicate = errors.New("数据冲突")
+	ErrUserNotFound  = gorm.ErrRecordNotFound
 )
 
-type UserDAO struct {
+type UserDAO interface {
+	Insert(ctx *gin.Context, u User) error
+	FindByEmail(ctx *gin.Context, email string) (User, error)
+	FindByPhone(ctx *gin.Context, phone string) (User, error)
+	FindById(ctx *gin.Context, id int64) (User, error)
+	FindByWechat(ctx *gin.Context, openId string) (User, error)
+	UpdateProfile(ctx *gin.Context, u User) error
+	UpdatePassword(ctx *gin.Context, u User) error
+}
+
+type GORMUserDAO struct {
 	db *gorm.DB
 }
 
-func NewUserDAO(db *gorm.DB) *UserDAO {
-	return &UserDAO{
+func NewUserDAO(db *gorm.DB) UserDAO {
+	return &GORMUserDAO{
 		db: db,
 	}
 }
 
-func (dao *UserDAO) Insert(ctx *gin.Context, u User) error {
+func (dao *GORMUserDAO) Insert(ctx *gin.Context, u User) error {
 	now := time.Now().UnixMilli()
-	u.CTime = now
-	u.UTime = now
+	u.Ctime = now
+	u.Utime = now
 	err := dao.db.WithContext(ctx).Create(&u).Error
 	mysqlErr, ok := err.(*mysql.MySQLError)
 	if ok {
 		const uniqueConflictsErrNo uint16 = 1062
 		if mysqlErr.Number == uniqueConflictsErrNo {
-			return ErrUserDuplicatePhone
+			return ErrUserDuplicate
 		}
 	}
 
@@ -40,45 +51,51 @@ func (dao *UserDAO) Insert(ctx *gin.Context, u User) error {
 
 }
 
-func (dao *UserDAO) FindByEmail(ctx *gin.Context, email string) (User, error) {
+func (dao *GORMUserDAO) FindByEmail(ctx *gin.Context, email string) (User, error) {
 	var u User
 	err := dao.db.WithContext(ctx).Where("email = ?", email).Find(&u).Error
 	return u, err
 }
-func (dao *UserDAO) FindByPhone(ctx *gin.Context, phone string) (User, error) {
+func (dao *GORMUserDAO) FindByPhone(ctx *gin.Context, phone string) (User, error) {
 	var u User
 	err := dao.db.WithContext(ctx).Where("phone = ?", phone).Find(&u).Error
 	return u, err
 }
 
-func (dao *UserDAO) UpdateProfile(ctx *gin.Context, u User) error {
+func (dao *GORMUserDAO) FindByWechat(ctx *gin.Context, openId string) (User, error) {
+	var u User
+	err := dao.db.WithContext(ctx).Where("wechat_open_id = ?", openId).Find(&u).Error
+	return u, err
+}
+
+func (dao *GORMUserDAO) UpdateProfile(ctx *gin.Context, u User) error {
 	now := time.Now().UnixMilli()
-	u.UTime = now
+	u.Utime = now
 	return dao.db.WithContext(ctx).Model(&u).Updates(
 		User{
 			Nickname: u.Nickname,
 			Birthday: u.Birthday,
 			Intro:    u.Intro,
-			UTime:    u.UTime,
+			Utime:    u.Utime,
 		}).Error
 }
 
-func (dao *UserDAO) UpdatePassword(ctx *gin.Context, u User) error {
+func (dao *GORMUserDAO) UpdatePassword(ctx *gin.Context, u User) error {
 	now := time.Now().UnixMilli()
-	u.UTime = now
+	u.Utime = now
 	return dao.db.WithContext(ctx).Model(&u).Updates(User{
 		Password: u.Password,
-		UTime:    u.UTime,
+		Utime:    u.Utime,
 	}).Error
 }
 
-func (dao *UserDAO) QueryProfile(ctx *gin.Context, u User) (User, error) {
+/*func (dao *GORMUserDAO) QueryProfile(ctx *gin.Context, u User) (User, error) {
 	err := dao.db.WithContext(ctx).First(&u).Error
 
 	return u, err
-}
+}*/
 
-func (dao *UserDAO) FindById(ctx *gin.Context, id int64) (User, error) {
+func (dao *GORMUserDAO) FindById(ctx *gin.Context, id int64) (User, error) {
 	var u User
 	err := dao.db.WithContext(ctx).Where("Id = ?", id).First(&u).Error
 
@@ -95,9 +112,23 @@ type User struct {
 	Birthday string
 	Intro    string
 	Phone    string `gorm:"unique"`
+	// 索引的最左匹配原则：
+	// 假如索引在 <A, B, C> 建好了
+	// A, AB, ABC 都能用
+	// WHERE A =?
+	// WHERE A = ? AND B =?    WHERE B = ? AND A =?
+	// WHERE A = ? AND B = ? AND C = ?  ABC 的顺序随便换
+	// WHERE 里面带了 ABC，可以用
+	// WHERE 里面，没有 A，就不能用
+
+	// 如果要创建联合索引，<unionid, openid>，用 openid 查询的时候不会走索引
+	// <openid, unionid> 用 unionid 查询的时候，不会走索引
+	// 微信的字段
+	WechatUnionID sql.NullString
+	WechatOpenID  sql.NullString `gorm:"unique"`
 
 	// 创建时间，毫秒数
-	CTime int64
+	Ctime int64
 	// 更新时间，毫秒数
-	UTime int64
+	Utime int64
 }

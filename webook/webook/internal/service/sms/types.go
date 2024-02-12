@@ -8,6 +8,7 @@ type Service interface {
 	// 调用者需要知道实现者需要什么类型的参数，是 []string，还是 map[string]string
 	//SendV2(ctx context.Context, tpl string, args any, numbers ...string) error
 	//SendV3(ctx context.Context, tpl string, args T, numbers ...string) error
+	GetVendor() string
 }
 
 type NamedArg struct {

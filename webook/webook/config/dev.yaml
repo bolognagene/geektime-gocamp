@@ -1,0 +1,9 @@
+db:
+  mysql:
+    dsn: "root:root@tcp(192.168.181.129:13316)/webook"
+
+redis:
+  addr: "192.168.181.129:6379"
+
+TplId:
+  code: "1877557"

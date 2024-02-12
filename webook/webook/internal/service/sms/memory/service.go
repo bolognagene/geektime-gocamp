@@ -7,14 +7,20 @@ import (
 )
 
 type Service struct {
+	vendor string
 }
 
-func NewService() *Service {
-	return &Service{}
+func NewService(vendor string) *Service {
+	return &Service{
+		vendor: vendor,
+	}
 }
 
-// Send 模拟发送验证码， 仅用于测试
-func (s Service) Send(ctx context.Context, tpl string, args []sms.NamedArg, numbers ...string) error {
+func (s *Service) Send(ctx context.Context, tpl string, args []sms.NamedArg, numbers ...string) error {
 	fmt.Println(args)
 	return nil
+}
+
+func (s *Service) GetVendor() string {
+	return s.vendor
 }

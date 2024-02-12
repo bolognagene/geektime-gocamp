@@ -12,5 +12,7 @@ type User struct {
 	Nickname string
 	Birthday string
 	Intro    string
-	Ctime    time.Time
+	// 不要组合，万一你将来可能还有 DingDingInfo，里面有同名字段 UnionID
+	WechatInfo WechatInfo
+	Ctime      time.Time
 }

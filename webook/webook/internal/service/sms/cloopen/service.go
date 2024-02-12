@@ -15,12 +15,14 @@ import (
 type Service struct {
 	client *cloopen.SMS
 	appId  string
+	vendor string
 }
 
-func NewService(c *cloopen.SMS, addId string) *Service {
+func NewService(c *cloopen.SMS, addId, vendor string) *Service {
 	return &Service{
 		client: c,
 		appId:  addId,
+		vendor: vendor,
 	}
 }
 
@@ -52,4 +54,8 @@ func (s *Service) Send(ctx context.Context, tplId string, args []mysms.NamedArg,
 		}
 	}
 	return nil
+}
+
+func (s *Service) GetVendor() string {
+	return s.vendor
 }
