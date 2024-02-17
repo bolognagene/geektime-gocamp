@@ -13,7 +13,7 @@ type JwtHandler interface {
 	CheckSession(ctx *gin.Context, ssid string) bool
 	ExtractToken(ctx *gin.Context) string
 	GetUserClaim(ctx *gin.Context) *UserClaims
-	GetAtKey(ctx *gin.Context) string
+	GetAtKey(ctx *gin.Context) []byte
 }
 
 type RefreshClaims struct {

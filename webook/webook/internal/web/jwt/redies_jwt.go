@@ -19,13 +19,13 @@ import (
 
 type RedisJwtHandler struct {
 	cmd               redis.Cmdable
-	AtKey             string
-	RtKey             string
+	AtKey             []byte
+	RtKey             []byte
 	refreshExpireTime time.Duration
 	accessExpireTime  time.Duration
 }
 
-func NewRedisJwtHandler(cmd redis.Cmdable, atKey string, rtKey string, refreshExpireTime time.Duration, accessExpireTime time.Duration) *RedisJwtHandler {
+func NewRedisJwtHandler(cmd redis.Cmdable, atKey []byte, rtKey []byte, refreshExpireTime time.Duration, accessExpireTime time.Duration) JwtHandler {
 	return &RedisJwtHandler{
 		cmd:               cmd,
 		AtKey:             atKey,
@@ -41,7 +41,7 @@ func NewRedisJwtHandler(cmd redis.Cmdable, atKey string, rtKey string, refreshEx
 	}
 }*/
 
-func (h *RedisJwtHandler) GetAtKey(ctx *gin.Context) string {
+func (h *RedisJwtHandler) GetAtKey(ctx *gin.Context) []byte {
 	return h.AtKey
 }
 

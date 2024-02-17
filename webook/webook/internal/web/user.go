@@ -4,6 +4,8 @@ import (
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/domain"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/service"
 	myjwt "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web/jwt"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/pkg/ginx"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/pkg/logger"
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
@@ -16,16 +18,17 @@ const biz = "login"
 type UserHandler struct {
 	svc         service.UserService
 	codeSvc     service.CodeService
+	l           logger.Logger
 	emailExp    *regexp.Regexp
 	passwordExp *regexp.Regexp
 	nickNameExp *regexp.Regexp
 	birthdayExp *regexp.Regexp
 	introExp    *regexp.Regexp
 	phoneExp    *regexp.Regexp
-	myjwt.JwtHandler
+	jwtHandler  myjwt.JwtHandler
 }
 
-func NewUserHandler(svc service.UserService, codeSvc service.CodeService) *UserHandler {
+func NewUserHandler(svc service.UserService, codeSvc service.CodeService, jwtHdl myjwt.JwtHandler, l logger.Logger) *UserHandler {
 	const (
 		emailRegexPattern    = "^\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*$"
 		passwordRegexPattern = `^(?=.*[A-Za-z])(?=.*\d)(?=.*[$@$!%*#?&])[A-Za-z\d$@$!%*#?&]{8,}$`
@@ -52,13 +55,16 @@ func NewUserHandler(svc service.UserService, codeSvc service.CodeService) *UserH
 		birthdayExp: birthdayExp,
 		introExp:    introExp,
 		phoneExp:    phoneExp,
+		jwtHandler:  jwtHdl,
+		l:           l,
 	}
 }
 
 func (u *UserHandler) RegisterRoutes(server *gin.Engine) {
 	ug := server.Group("/users")
 	//ug.GET("/profile", u.Profile)
-	ug.GET("/profile", u.ProfileByJWT)
+	//ug.GET("/profile", u.ProfileByJWT)
+	ug.GET("/profile", ginx.WrapBodyAndToken[any, myjwt.UserClaims](u.ProfileByJWTV1, "ProfileByJWTV1", u.l))
 	ug.POST("/signup", u.SignUp)
 	//ug.POST("/login", u.Login)
 	ug.POST("/login", u.LoginByJWT)
@@ -67,7 +73,7 @@ func (u *UserHandler) RegisterRoutes(server *gin.Engine) {
 	ug.POST("/profile/edit", u.EditProfileByJWT)
 	//ug.POST("/edit", u.EditPassword)
 	ug.POST("/edit", u.EditPasswordByJWT)
-	ug.POST("/login_sms/code/send", u.SendLoginSMSCode)
+	ug.POST("/login_sms/code/send", ginx.WrapBody[LoginBySMSReq](u.SendLoginSMSCodeV1, "SendLoginSMSCodeV1", u.l))
 	ug.POST("/login_sms", u.LoginBySMS)
 	ug.POST("/refresh_token", u.RefreshToken)
 }
@@ -87,7 +93,7 @@ func (u *UserHandler) Profile(ctx *gin.Context) {
 }
 
 func (u *UserHandler) ProfileByJWT(ctx *gin.Context) {
-	claims := u.GetUserClaim(ctx)
+	claims := u.jwtHandler.GetUserClaim(ctx)
 	if claims == nil {
 		ctx.AbortWithStatus(http.StatusUnauthorized)
 		return
@@ -101,6 +107,22 @@ func (u *UserHandler) ProfileByJWT(ctx *gin.Context) {
 	}
 
 	ctx.String(http.StatusOK, "这是我的 Profile: \n 昵称是: "+user.Nickname+", 生日是:"+user.Birthday+", 简介是: "+user.Intro)
+}
+
+func (u *UserHandler) ProfileByJWTV1(ctx *gin.Context, req any, claims myjwt.UserClaims) (ginx.Result, error) {
+	id := claims.Uid
+	user, err := u.svc.Profile(ctx, id)
+	if err != nil {
+		return ginx.Result{
+			Code: 5,
+			Msg:  "系统错误",
+		}, err
+	}
+
+	return ginx.Result{
+		Code: 2,
+		Msg:  "这是我的 Profile: \n 昵称是: " + user.Nickname + ", 生日是:" + user.Birthday + ", 简介是: " + user.Intro,
+	}, nil
 }
 
 func (u *UserHandler) SignUp(ctx *gin.Context) {
@@ -284,7 +306,7 @@ func (u *UserHandler) LoginByJWT(ctx *gin.Context) {
 		return
 	}
 
-	err = u.SetLoginToken(ctx, user.Id)
+	err = u.jwtHandler.SetLoginToken(ctx, user.Id)
 	if err != nil {
 		ctx.JSON(http.StatusOK, Result{
 			Code: 5,
@@ -298,7 +320,7 @@ func (u *UserHandler) LoginByJWT(ctx *gin.Context) {
 }
 
 func (u *UserHandler) LogoutByJWT(ctx *gin.Context) {
-	err := u.ClearToken(ctx)
+	err := u.jwtHandler.ClearToken(ctx)
 	if err != nil {
 		ctx.JSON(http.StatusOK, Result{
 			Code: 5,
@@ -362,7 +384,7 @@ func (u *UserHandler) LoginBySMS(ctx *gin.Context) {
 		return
 	}
 
-	err = u.SetLoginToken(ctx, user.Id)
+	err = u.jwtHandler.SetLoginToken(ctx, user.Id)
 	if err != nil {
 		ctx.JSON(http.StatusOK, Result{
 			Code: 5,
@@ -406,6 +428,32 @@ func (u *UserHandler) SendLoginSMSCode(ctx *gin.Context) {
 		Code: 2,
 		Msg:  "验证码发送成功",
 	})
+}
+
+type LoginBySMSReq struct {
+	Phone string `json:"phone"`
+}
+
+func (u *UserHandler) SendLoginSMSCodeV1(ctx *gin.Context, req LoginBySMSReq) (ginx.Result, error) {
+	err := u.codeSvc.Send(ctx, biz, req.Phone)
+	if err != nil {
+		if err == service.ErrCodeSendTooMany {
+			return ginx.Result{
+				Code: 4,
+				Msg:  "验证码发送太频繁",
+			}, err
+		}
+
+		return ginx.Result{
+			Code: 5,
+			Msg:  "系统错误",
+		}, err
+	}
+
+	return ginx.Result{
+		Code: 2,
+		Msg:  "验证码发送成功",
+	}, nil
 }
 
 func (u *UserHandler) EditProfile(ctx *gin.Context) {
@@ -522,7 +570,7 @@ func (u *UserHandler) EditProfileByJWT(ctx *gin.Context) {
 		return
 	}
 
-	claims := u.GetUserClaim(ctx)
+	claims := u.jwtHandler.GetUserClaim(ctx)
 	if claims == nil {
 		ctx.AbortWithStatus(http.StatusUnauthorized)
 		return
@@ -616,7 +664,7 @@ func (u *UserHandler) EditPasswordByJWT(ctx *gin.Context) {
 		return
 	}
 
-	claims := u.GetUserClaim(ctx)
+	claims := u.jwtHandler.GetUserClaim(ctx)
 	if claims == nil {
 		ctx.AbortWithStatus(http.StatusUnauthorized)
 		return
@@ -636,23 +684,23 @@ func (u *UserHandler) EditPasswordByJWT(ctx *gin.Context) {
 }
 
 func (u *UserHandler) RefreshToken(ctx *gin.Context) {
-	refreshToken := u.ExtractToken(ctx)
+	refreshToken := u.jwtHandler.ExtractToken(ctx)
 	var rc myjwt.RefreshClaims
 	// 先验证refreshToken
 	token, err := jwt.ParseWithClaims(refreshToken, &rc, func(token *jwt.Token) (interface{}, error) {
-		return u.GetAtKey(ctx), nil
+		return u.jwtHandler.GetAtKey(ctx), nil
 	})
 	if err != nil || !token.Valid {
 		ctx.AbortWithStatus(http.StatusUnauthorized)
 	}
 
 	// 在验证是否登出，看ssid是否在redis里
-	if u.CheckSession(ctx, rc.Ssid) {
+	if u.jwtHandler.CheckSession(ctx, rc.Ssid) {
 		ctx.AbortWithStatus(http.StatusUnauthorized)
 	}
 
 	// 搞个新的access_token
-	err = u.SetJWTToken(ctx, rc.Uid, rc.Ssid)
+	err = u.jwtHandler.SetJWTToken(ctx, rc.Uid, rc.Ssid)
 	if err != nil {
 		ctx.AbortWithStatus(http.StatusUnauthorized)
 	}

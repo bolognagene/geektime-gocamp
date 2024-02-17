@@ -9,12 +9,14 @@ import (
 
 // 用JWT的方式登录校验
 type LoginJWTMiddlewareBuilder struct {
-	paths []string
-	myjwt.JwtHandler
+	paths      []string
+	jwtHandler myjwt.JwtHandler
 }
 
-func NewLoginJWTMiddlewareBuilder() *LoginJWTMiddlewareBuilder {
-	return &LoginJWTMiddlewareBuilder{}
+func NewLoginJWTMiddlewareBuilder(jwtHdl myjwt.JwtHandler) *LoginJWTMiddlewareBuilder {
+	return &LoginJWTMiddlewareBuilder{
+		jwtHandler: jwtHdl,
+	}
 }
 
 func (l *LoginJWTMiddlewareBuilder) IgnorePath(path string) *LoginJWTMiddlewareBuilder {
@@ -33,14 +35,14 @@ func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
 
 		// 用JWT的方式来校验
 		// 得到请求头里的Authorization， 一般是 Bearer *****的格式
-		tokenStr := l.ExtractToken(ctx)
+		tokenStr := l.jwtHandler.ExtractToken(ctx)
 		// 这里定义claims为指针，因为ParseWithClaims函数需要修改这个claims
 		claims := &myjwt.UserClaims{}
 		/*token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
 			return []byte("TXqESPLch4roEwRPzo0WOkvGhpW4y0FU"), nil
 		})*/
 		token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
-			return l.GetAtKey(ctx), nil
+			return l.jwtHandler.GetAtKey(ctx), nil
 		})
 		if err != nil {
 			// 没登录
@@ -63,7 +65,7 @@ func (l *LoginJWTMiddlewareBuilder) Build() gin.HandlerFunc {
 		}
 
 		// 这里要在Redis里查询ssid这个key是否存在, 如果有证明已经登出
-		if l.CheckSession(ctx, claims.Ssid) {
+		if l.jwtHandler.CheckSession(ctx, claims.Ssid) {
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
