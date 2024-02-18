@@ -3,21 +3,29 @@ package logger
 import (
 	"bytes"
 	"context"
+	"crypto/sha1"
+	"encoding/hex"
+	"encoding/json"
 	"github.com/gin-gonic/gin"
+	"hash"
 	"io"
+	"strings"
 	"time"
 )
 
 type Builder struct {
 	allowReqBody  bool
 	allowRespBody bool
+	allowEncrypt  bool
 	countLimit    int
+	h             hash.Hash
 	loggerFunc    func(ctx context.Context, al *AccessLog)
 }
 
 func NewBuilder(loggerFunc func(ctx context.Context, al *AccessLog)) *Builder {
 	return &Builder{
 		loggerFunc: loggerFunc,
+		h:          sha1.New(),
 	}
 }
 
@@ -28,6 +36,11 @@ func (b *Builder) AllowReqBody() *Builder {
 
 func (b *Builder) AllowRespBody() *Builder {
 	b.allowRespBody = true
+	return b
+}
+
+func (b *Builder) AllowEncrypt() *Builder {
+	b.allowEncrypt = true
 	return b
 }
 
@@ -60,6 +73,22 @@ func (b *Builder) Build() gin.HandlerFunc {
 			}
 			// 这其实是一个很消耗 CPU 和内存的操作
 			// 因为会引起复制
+
+			// 这里进行脱敏
+			if b.allowEncrypt {
+				var reqJson map[string]interface{}
+				_ = json.Unmarshal(body, &reqJson)
+				for key, value := range reqJson {
+					if strings.EqualFold(key, "phone") ||
+						strings.EqualFold(key, "email") ||
+						strings.Contains(strings.ToLower(key), "password") {
+						b.h.Write([]byte(value.(string)))
+						reqJson[key] = hex.EncodeToString(b.h.Sum(nil))
+					}
+				}
+				body, _ = json.Marshal(reqJson)
+			}
+
 			al.ReqBody = string(body)
 		}
 

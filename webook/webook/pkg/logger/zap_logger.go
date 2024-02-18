@@ -1,14 +1,24 @@
 package logger
 
-import "go.uber.org/zap"
+import (
+	"crypto/sha1"
+	"encoding/hex"
+	"go.uber.org/zap"
+	"hash"
+	"strings"
+)
 
 type ZapLogger struct {
-	l *zap.Logger
+	l            *zap.Logger
+	h            hash.Hash
+	allowEncrypt bool
 }
 
-func NewZapLogger(l *zap.Logger) *ZapLogger {
+func NewZapLogger(l *zap.Logger, encrypt bool) *ZapLogger {
 	return &ZapLogger{
-		l: l,
+		l:            l,
+		h:            sha1.New(),
+		allowEncrypt: encrypt,
 	}
 }
 
@@ -31,6 +41,14 @@ func (z *ZapLogger) Error(msg string, args ...Field) {
 func (z *ZapLogger) toZapFields(args []Field) []zap.Field {
 	res := make([]zap.Field, 0, len(args))
 	for _, arg := range args {
+		// 脱敏，碰到phone, password, email进行加密
+		// https://md5decrypt.net/en/Sha1/
+		if z.allowEncrypt && (strings.EqualFold(arg.Key, "phone") ||
+			strings.EqualFold(arg.Key, "email") ||
+			strings.Contains(strings.ToLower(arg.Key), "password")) {
+			z.h.Write([]byte(arg.Value.(string)))
+			arg.Value = hex.EncodeToString(z.h.Sum(nil))
+		}
 		res = append(res, zap.Any(arg.Key, arg.Value))
 	}
 	return res

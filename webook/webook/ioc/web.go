@@ -34,7 +34,7 @@ func InitMiddlewares(redisClient redis.Cmdable, jwtHandler jwt.JwtHandler, l log
 				Key:   "AccessLog",
 				Value: al,
 			})
-		}).AllowReqBody().AllowRespBody().CountLimit(1024).Build(),
+		}).AllowReqBody().AllowRespBody().AllowEncrypt().CountLimit(1024).Build(),
 		middleware.NewLoginJWTMiddlewareBuilder(jwtHandler).
 			IgnorePath("/users/signup").
 			IgnorePath("/users/login_sms/code/send").

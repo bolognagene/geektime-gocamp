@@ -104,3 +104,10 @@ func Error(value error) Field {
 		Value: value,
 	}
 }
+
+func Any(key string, val any) Field {
+	return Field{
+		Key:   key,
+		Value: val,
+	}
+}

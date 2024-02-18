@@ -10,5 +10,5 @@ func InitLogger() logger.Logger {
 	if err != nil {
 		panic(err)
 	}
-	return logger.NewZapLogger(l)
+	return logger.NewZapLogger(l, true)
 }
