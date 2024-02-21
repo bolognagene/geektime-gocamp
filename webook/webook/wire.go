@@ -22,6 +22,7 @@ func InitWebServer() *gin.Engine {
 
 		// 初始化 DAO
 		dao.NewUserDAO,
+		dao.NewGORMArticleDAO,
 
 		wire.Value(time.Minute*15),
 		cache.NewUserCache,
@@ -29,9 +30,11 @@ func InitWebServer() *gin.Engine {
 
 		repository.NewUserRepository,
 		repository.NewCodeRepository,
+		repository.NewCachedArticleRepository,
 
 		service.NewUserService,
 		service.NewCodeService,
+		service.NewArticleService,
 		ioc.InitWechatService,
 		// 直接基于内存实现
 		ioc.InitSMSService,
@@ -40,6 +43,7 @@ func InitWebServer() *gin.Engine {
 		// handler
 		web.NewUserHandler,
 		web.NewOAuth2WechatHandler,
+		web.NewArticleHandler,
 		// 你中间件呢？
 		// 你注册路由呢？
 		// 你这个地方没有用到前面的任何东西

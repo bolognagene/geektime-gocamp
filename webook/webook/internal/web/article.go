@@ -26,24 +26,51 @@ func NewArticleHandler(svc service.ArticleService, l logger.Logger) *ArticleHand
 func (h *ArticleHandler) RegisterRoutes(server *gin.Engine) {
 	g := server.Group("/articles")
 
-	g.POST("/edit", ginx.WrapBodyAndToken[EditReq, myjwt.UserClaims](h.EditArticle, "EditArticle", h.l))
+	g.POST("/edit", ginx.WrapBodyAndToken[ArticleReq, myjwt.UserClaims](h.EditArticle, "EditArticle", h.l))
+	g.POST("/publish", ginx.WrapBodyAndToken[ArticleReq, myjwt.UserClaims](h.PublishArticle, "PublishArticle", h.l))
 }
 
-type EditReq struct {
+type ArticleReq struct {
+	Id      int64  `json:"id"`
 	Title   string `json:"title"`
 	Content string `json:"content"`
 }
 
-func (h *ArticleHandler) EditArticle(ctx *gin.Context, req EditReq, uc myjwt.UserClaims) (ginx.Result, error) {
-	uid := uc.Uid
-
-	id, err := h.svc.Save(ctx, domain.Article{
+func (req ArticleReq) toDomain(uid int64) domain.Article {
+	return domain.Article{
+		Id:      req.Id,
 		Title:   req.Title,
 		Content: req.Content,
 		Author: domain.Author{
 			Id: uid,
 		},
-	})
+	}
+}
+
+func (h *ArticleHandler) EditArticle(ctx *gin.Context, req ArticleReq, uc myjwt.UserClaims) (ginx.Result, error) {
+	uid := uc.Uid
+
+	id, err := h.svc.Save(ctx, req.toDomain(uid))
+
+	if err != nil {
+		return ginx.Result{
+			Code: 5,
+			Msg:  "系统错误",
+		}, err
+	}
+
+	return ginx.Result{
+		Code: 2,
+		Msg:  "创建成功",
+		Data: id,
+	}, nil
+
+}
+
+func (h *ArticleHandler) PublishArticle(ctx *gin.Context, req ArticleReq, uc myjwt.UserClaims) (ginx.Result, error) {
+	uid := uc.Uid
+
+	id, err := h.svc.Publish(ctx, req.toDomain(uid))
 
 	if err != nil {
 		return ginx.Result{

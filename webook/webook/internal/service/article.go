@@ -8,6 +8,7 @@ import (
 
 type ArticleService interface {
 	Save(ctx context.Context, article domain.Article) (int64, error)
+	Publish(ctx context.Context, article domain.Article) (int64, error)
 }
 
 type articleService struct {
@@ -21,5 +22,14 @@ func NewArticleService(repo repository.ArticleRepository) ArticleService {
 }
 
 func (s *articleService) Save(ctx context.Context, article domain.Article) (int64, error) {
+	// 如何article的Id大于0， 证明该文章已经有了，所以是Update，否则是Create
+	if article.Id > 0 {
+		err := s.repo.Update(ctx, article)
+		return article.Id, err
+	}
 	return s.repo.Create(ctx, article)
+}
+
+func (s *articleService) Publish(ctx context.Context, article domain.Article) (int64, error) {
+	return s.repo.Sync(ctx, article)
 }
