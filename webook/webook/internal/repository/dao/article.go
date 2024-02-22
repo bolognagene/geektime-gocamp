@@ -3,6 +3,8 @@ package dao
 import (
 	"context"
 	"fmt"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/domain"
+	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"time"
@@ -13,6 +15,7 @@ type ArticleDAO interface {
 	UpdateById(ctx context.Context, article Article) error
 	Sync(ctx context.Context, article Article) (int64, error)
 	Upsert(ctx context.Context, article PublishArticle) error
+	SyncStatus(ctx *gin.Context, article domain.Article) error
 }
 
 type GORMArticleDAO struct {
@@ -46,6 +49,7 @@ func (dao *GORMArticleDAO) UpdateById(ctx context.Context, article Article) erro
 			"title":   article.Title,
 			"content": article.Content,
 			"utime":   article.Utime,
+			"status":  article.Status,
 		})
 	if res.Error != nil {
 		return res.Error
@@ -114,12 +118,47 @@ func (dao *GORMArticleDAO) Upsert(ctx context.Context, article PublishArticle) e
 			"title":   article.Title,
 			"content": article.Content,
 			"utime":   article.Utime,
+			"status":  article.Status,
 		}),
 	}).Create(&article).Error
 	// MySQL 最终的语句 INSERT xxx ON DUPLICATE KEY UPDATE xxx
 
 	// 一条 SQL 语句，都不需要开启事务
 	// auto commit: 意思是自动提交
+	return err
+}
+
+func (dao *GORMArticleDAO) SyncStatus(ctx *gin.Context, article domain.Article) error {
+	now := time.Now().UnixMilli()
+	err := dao.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		res := tx.Model(&Article{}).
+			Where("id = ? AND author_id = ?", article.Id, article.Author.Id).
+			Updates(map[string]any{
+				"status": article.Status,
+				"utime":  now,
+			})
+
+		if res.Error != nil {
+			return res.Error
+		}
+
+		if res.RowsAffected == 0 {
+			// 要么 ID 是错的，要么作者不对
+			// 后者情况下，你就要小心，可能有人在搞你的系统
+			// 没必要再用 ID 搜索数据库来区分这两种情况
+			// 用 prometheus 打点，只要频繁出现，你就告警，然后手工介入排查
+			return fmt.Errorf("可能有人在搞你，误操作非自己的文章, uid: %d, aid: %d",
+				article.Author.Id, article.Id)
+
+		}
+
+		return tx.Model(&PublishArticle{}).
+			Where("id = ?", article.Id).
+			Updates(map[string]any{
+				"status": article.Status,
+				"utime":  now,
+			}).Error
+	})
 	return err
 }
 
@@ -153,6 +192,7 @@ type Article struct {
 
 	// 在 author_id 上创建索引
 	AuthorId int64 `gorm:"index"`
+	Status   uint8
 	//AuthorId int64 `gorm:"index=aid_ctime"`
 	//Ctime    int64 `gorm:"index=aid_ctime"`
 	Ctime int64

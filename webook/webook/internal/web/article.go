@@ -28,6 +28,7 @@ func (h *ArticleHandler) RegisterRoutes(server *gin.Engine) {
 
 	g.POST("/edit", ginx.WrapBodyAndToken[ArticleReq, myjwt.UserClaims](h.EditArticle, "EditArticle", h.l))
 	g.POST("/publish", ginx.WrapBodyAndToken[ArticleReq, myjwt.UserClaims](h.PublishArticle, "PublishArticle", h.l))
+	g.POST("/withdraw", ginx.WrapBodyAndToken[WithdrawReq, myjwt.UserClaims](h.WithdrawArticle, "WithdrawArticle", h.l))
 }
 
 type ArticleReq struct {
@@ -81,8 +82,37 @@ func (h *ArticleHandler) PublishArticle(ctx *gin.Context, req ArticleReq, uc myj
 
 	return ginx.Result{
 		Code: 2,
-		Msg:  "创建成功",
+		Msg:  "发表成功",
 		Data: id,
+	}, nil
+
+}
+
+type WithdrawReq struct {
+	Id int64 `json:"id"`
+}
+
+func (h *ArticleHandler) WithdrawArticle(ctx *gin.Context, req WithdrawReq, uc myjwt.UserClaims) (ginx.Result, error) {
+	uid := uc.Uid
+
+	err := h.svc.Withdraw(ctx, domain.Article{
+		Id: req.Id,
+		Author: domain.Author{
+			Id: uid,
+		},
+	})
+
+	if err != nil {
+		return ginx.Result{
+			Code: 5,
+			Msg:  "系统错误",
+		}, err
+	}
+
+	return ginx.Result{
+		Code: 2,
+		Msg:  "withdraw成功",
+		Data: req.Id,
 	}, nil
 
 }
