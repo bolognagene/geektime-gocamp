@@ -45,6 +45,8 @@ type Article struct {
 }
 
 // PublishArticle 这个代表的是线上表
-type PublishArticle struct {
+/*type PublishArticle struct {
 	Article
-}
+}*/
+
+type PublishArticle Article

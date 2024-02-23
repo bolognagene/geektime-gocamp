@@ -77,9 +77,7 @@ func (dao *GORMArticleDAO) Sync(ctx context.Context, article Article) (int64, er
 		}
 
 		// 操作线上库了
-		return txDao.Upsert(ctx, PublishArticle{
-			Article: article,
-		})
+		return txDao.Upsert(ctx, PublishArticle(article))
 	})
 
 	return id, err

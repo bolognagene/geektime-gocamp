@@ -92,9 +92,7 @@ func (m *MongoArticle) Sync(ctx context.Context, article Article) (int64, error)
 	}
 	article.Id = id
 
-	err = m.Upsert(ctx, PublishArticle{
-		Article: article,
-	})
+	err = m.Upsert(ctx, PublishArticle(article))
 
 	return id, err
 
