@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/domain"
-	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository/dao"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository/dao/article"
 	"github.com/gin-gonic/gin"
 )
 
@@ -15,10 +15,10 @@ type ArticleRepository interface {
 }
 
 type CachedArticleRepository struct {
-	dao dao.ArticleDAO
+	dao article.ArticleDAO
 }
 
-func NewCachedArticleRepository(dao dao.ArticleDAO) ArticleRepository {
+func NewCachedArticleRepository(dao article.ArticleDAO) ArticleRepository {
 	return &CachedArticleRepository{
 		dao: dao,
 	}
@@ -37,15 +37,15 @@ func (repo *CachedArticleRepository) Sync(ctx context.Context, article domain.Ar
 }
 
 func (repo *CachedArticleRepository) SyncStatus(ctx *gin.Context, article domain.Article) error {
-	return repo.dao.SyncStatus(ctx, article)
+	return repo.dao.SyncStatus(ctx, repo.toEntity(article))
 }
 
-func (repo *CachedArticleRepository) toEntity(article domain.Article) dao.Article {
-	return dao.Article{
-		Id:       article.Id,
-		Content:  article.Content,
-		Title:    article.Title,
-		AuthorId: article.Author.Id,
-		Status:   article.Status.ToUint8(),
+func (repo *CachedArticleRepository) toEntity(art domain.Article) article.Article {
+	return article.Article{
+		Id:       art.Id,
+		Content:  art.Content,
+		Title:    art.Title,
+		AuthorId: art.Author.Id,
+		Status:   art.Status.ToUint8(),
 	}
 }

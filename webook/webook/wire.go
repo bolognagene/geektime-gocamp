@@ -6,6 +6,7 @@ import (
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository/cache"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository/dao"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository/dao/article"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/service"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/ioc"
@@ -19,10 +20,13 @@ func InitWebServer() *gin.Engine {
 		// 最基础的第三方依赖
 		ioc.InitDB, ioc.InitRedis,
 		ioc.InitLogger,
+		ioc.InitMongoDB,
+		ioc.InitSnowflakeNode,
 
 		// 初始化 DAO
 		dao.NewUserDAO,
-		dao.NewGORMArticleDAO,
+		//article.NewGORMArticleDAO,
+		article.NewMongoArticle,
 
 		wire.Value(time.Minute*15),
 		cache.NewUserCache,

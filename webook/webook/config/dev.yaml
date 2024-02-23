@@ -7,3 +7,6 @@ redis:
 
 TplId:
   code: "1877557"
+
+mongodb:
+  addr: "mongodb://root:example@192.168.181.129:27017/"
