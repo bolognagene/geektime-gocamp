@@ -4,13 +4,14 @@ import (
 	"context"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/domain"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository"
-	"github.com/gin-gonic/gin"
 )
 
 type ArticleService interface {
 	Save(ctx context.Context, article domain.Article) (int64, error)
 	Publish(ctx context.Context, article domain.Article) (int64, error)
-	Withdraw(ctx *gin.Context, article domain.Article) error
+	Withdraw(ctx context.Context, article domain.Article) error
+	List(ctx context.Context, uid int64, offset int, limit int) ([]domain.Article, error)
+	Detail(context.Context, id int64, uid int64) (domain.Article, error)
 }
 
 type articleService struct {
@@ -38,7 +39,16 @@ func (s *articleService) Publish(ctx context.Context, article domain.Article) (i
 	return s.repo.Sync(ctx, article)
 }
 
-func (s *articleService) Withdraw(ctx *gin.Context, article domain.Article) error {
+func (s *articleService) Withdraw(ctx context.Context, article domain.Article) error {
 	article.Status = domain.ArticleStatusPrivate
 	return s.repo.SyncStatus(ctx, article)
+}
+
+func (s *articleService) List(ctx context.Context, uid int64, offset int, limit int) ([]domain.Article, error) {
+	return s.repo.List(ctx, uid, offset, limit)
+}
+
+func (s *articleService) Detail(ctx context.Context, id int64, uid int64) (domain.Article, error) {
+	//TODO implement me
+	panic("implement me")
 }

@@ -3,7 +3,6 @@ package article
 import (
 	"context"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"time"
@@ -34,7 +33,7 @@ func (dao *GORMArticleDAO) UpdateById(ctx context.Context, article Article) erro
 	//dao.db.WithContext(ctx).Save(&article)
 	// 可读性很差
 	// 这里需要加上文章作者和传入的uid一致，以防止修改其他人的文章
-	res := dao.db.WithContext(ctx).Model(&article).
+	res := dao.db.WithContext(ctx).Model(&Article{}).
 		Where("id = ? AND author_id = ?", article.Id, article.AuthorId).
 		Updates(map[string]any{
 			"title":   article.Title,
@@ -117,7 +116,7 @@ func (dao *GORMArticleDAO) Upsert(ctx context.Context, article PublishArticle) e
 	return err
 }
 
-func (dao *GORMArticleDAO) SyncStatus(ctx *gin.Context, article Article) error {
+func (dao *GORMArticleDAO) SyncStatus(ctx context.Context, article Article) error {
 	now := time.Now().UnixMilli()
 	err := dao.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		res := tx.Model(&Article{}).
@@ -149,6 +148,20 @@ func (dao *GORMArticleDAO) SyncStatus(ctx *gin.Context, article Article) error {
 			}).Error
 	})
 	return err
+}
+
+func (dao *GORMArticleDAO) GetByAuthor(ctx context.Context, uid int64, offset int, limit int) ([]Article, error) {
+	var arts []Article
+	err := dao.db.WithContext(ctx).Model(&Article{}).
+		Where("author_id=?", uid).Offset(offset).Limit(limit).
+		Order("utime DESC").
+		//Order(clause.OrderBy{Columns: []clause.OrderByColumn{
+		//	{Column: clause.Column{Name: "utime"}, Desc: true},
+		//	{Column: clause.Column{Name: "ctime"}, Desc: false},
+		//}}).
+		Find(&arts).Error
+
+	return arts, err
 }
 
 // 事务传播机制是指如果当前有事务，就在事务内部执行 Insert

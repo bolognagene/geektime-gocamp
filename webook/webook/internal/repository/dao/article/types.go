@@ -2,7 +2,6 @@ package article
 
 import (
 	"context"
-	"github.com/gin-gonic/gin"
 )
 
 type ArticleDAO interface {
@@ -10,7 +9,8 @@ type ArticleDAO interface {
 	UpdateById(ctx context.Context, article Article) error
 	Sync(ctx context.Context, article Article) (int64, error)
 	Upsert(ctx context.Context, article PublishArticle) error
-	SyncStatus(ctx *gin.Context, article Article) error
+	SyncStatus(ctx context.Context, article Article) error
+	GetByAuthor(ctx context.Context, uid int64, offset int, limit int) ([]Article, error)
 }
 
 // Article 这是制作库的
@@ -50,3 +50,12 @@ type Article struct {
 }*/
 
 type PublishArticle Article
+
+type PublishedArticleV1 struct {
+	Id       int64
+	Title    string
+	AuthorId int64
+	Status   uint8
+	Ctime    int64
+	Utime    int64
+}

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"github.com/bwmarrin/snowflake"
-	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -115,7 +114,87 @@ func (m *MongoArticle) Upsert(ctx context.Context, article PublishArticle) error
 	return err
 }
 
-func (m *MongoArticle) SyncStatus(ctx *gin.Context, article Article) error {
+// SyncStatusV1 mongodb transaction需要配置mongodb为replicaSet模式，还需要再研究
+func (m *MongoArticle) SyncStatusV1(ctx context.Context, article Article) error {
+	now := time.Now().UnixMilli()
+	article.Utime = now
+
+	session, err := m.client.StartSession()
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		session.EndSession(ctx)
+	}()
+
+	// 开始事务
+	err = session.StartTransaction()
+	if err != nil {
+		return err
+	}
+
+	mongo.WithSession(ctx, session, func(sessionContext mongo.SessionContext) error {
+		filter := bson.M{"id": article.Id, "author_id": article.AuthorId}
+		update := bson.M{"$set": bson.M{"status": article.Status, "utime": now}}
+
+		res, err := m.col.UpdateOne(sessionContext, filter, update)
+		if err != nil {
+			// 回滚事务
+			err2 := session.AbortTransaction(ctx)
+			if err2 != nil {
+				return fmt.Errorf("操作制作库失败： %v, 且事务回滚失败: %v, "+
+					"article Id is: %d, status: %d", err, err2, article.Id, article.Status)
+			}
+			return fmt.Errorf("操作制作库失败： %v, "+
+				"article Id is: %d, status: %d", err, article.Id, article.Status)
+		}
+
+		if res.ModifiedCount == 0 {
+			return fmt.Errorf("操作失败，可能是创作者非法 id %d, author_id %d",
+				article.Id, article.AuthorId)
+		}
+
+		res, err = m.liveCol.UpdateOne(sessionContext, filter, update)
+		if err != nil {
+			// 回滚事务
+			err2 := session.AbortTransaction(ctx)
+			if err2 != nil {
+				return fmt.Errorf("操作线上库失败： %v, 且事务回滚失败: %v, "+
+					"article Id is: %d, status: %d", err, err2, article.Id, article.Status)
+			}
+			return fmt.Errorf("操作线上库失败： %v, "+
+				"article Id is: %d, status: %d", err, article.Id, article.Status)
+		}
+
+		// test transaction
+		if res.ModifiedCount == 0 {
+			err2 := session.AbortTransaction(ctx)
+			if err2 != nil {
+				return fmt.Errorf("操作线上库失败： %v, 且事务回滚失败: %v, "+
+					"article Id is: %d, status: %d", err, err2, article.Id, article.Status)
+			}
+			return fmt.Errorf("操作线上库失败： %v, "+
+				"article Id is: %d, status: %d", err, article.Id, article.Status)
+		}
+
+		err = session.CommitTransaction(ctx)
+		if err != nil {
+			return fmt.Errorf("提交失败导致操作失败： %v, "+
+				"article Id is: %d, status: %d", err, article.Id, article.Status)
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *MongoArticle) SyncStatus(ctx context.Context, article Article) error {
 	now := time.Now().UnixMilli()
 	article.Utime = now
 
@@ -171,6 +250,11 @@ func (m *MongoArticle) SyncStatus(ctx *gin.Context, article Article) error {
 	}
 
 	return nil
+}
+
+func (m *MongoArticle) GetByAuthor(ctx context.Context, uid int64, offset int, limit int) ([]Article, error) {
+	//TODO implement me
+	panic("implement me")
 }
 
 func InitCollections(db *mongo.Database) error {
