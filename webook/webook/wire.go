@@ -28,15 +28,18 @@ func InitWebServer() *gin.Engine {
 		dao.NewUserDAO,
 		article.NewGORMArticleDAO,
 		//article.NewMongoArticle,
+		dao.NewGORMInteractiveDAO,
 
 		wire.Value(time.Minute*15),
 		cache.NewUserCache,
 		cache.NewCodeCache,
 		cache.NewRedisArticleCache,
+		cache.NewRedisInteractiveCache,
 
 		repository.NewUserRepository,
 		repository.NewCodeRepository,
 		repository.NewCachedArticleRepository,
+		repository.NewCachedInteractiveRepository,
 
 		service.NewUserService,
 		service.NewCodeService,
@@ -44,6 +47,8 @@ func InitWebServer() *gin.Engine {
 		ioc.InitWechatService,
 		// 直接基于内存实现
 		ioc.InitSMSService,
+		service.NewInteractiveService,
+
 		ioc.NewWechatHandlerConfig,
 		ioc.InitRedisJWTHander,
 		// handler

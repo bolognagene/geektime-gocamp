@@ -16,14 +16,18 @@ import (
 var _ handler = (*ArticleHandler)(nil)
 
 type ArticleHandler struct {
-	svc service.ArticleService
-	l   logger.Logger
+	svc      service.ArticleService
+	interSvc service.InteractiveService
+	l        logger.Logger
+	biz      string
 }
 
-func NewArticleHandler(svc service.ArticleService, l logger.Logger) *ArticleHandler {
+func NewArticleHandler(svc service.ArticleService, interSvc service.InteractiveService, l logger.Logger) *ArticleHandler {
 	return &ArticleHandler{
-		svc: svc,
-		l:   l,
+		svc:      svc,
+		interSvc: interSvc,
+		l:        l,
+		biz:      "article",
 	}
 }
 
@@ -37,6 +41,10 @@ func (h *ArticleHandler) RegisterRoutes(server *gin.Engine) {
 
 	gpub := server.Group("/pub")
 	gpub.GET("/:id", ginx.WrapToken[myjwt.UserClaims](h.PubDetail, "DetailPubArticle", h.l))
+	// 点赞是这个接口，取消点赞也是这个接口
+	// RESTful 风格
+	//gpub.GET("/like/:id", ginx.WrapToken[myjwt.UserClaims](h.PubDetail, "DetailPubArticle", h.l))
+	gpub.POST("/like", ginx.WrapBodyAndToken[LikeReq, myjwt.UserClaims](h.Like, "LikeArticle", h.l))
 }
 
 func (h *ArticleHandler) Edit(ctx *gin.Context, req ArticleReq, uc myjwt.UserClaims) (ginx.Result, error) {
@@ -191,6 +199,17 @@ func (h *ArticleHandler) PubDetail(ctx *gin.Context, uc myjwt.UserClaims) (ginx.
 		}, err
 	}
 
+	// 增加阅读计数。
+	go func() {
+		err1 := h.interSvc.IncrReadCnt(ctx, h.biz, article.Id)
+		if err1 != nil {
+			h.l.Error("增加阅读计数失败",
+				logger.Int64("aid", article.Id),
+				logger.Error(err))
+		}
+
+	}()
+
 	return ginx.Result{
 		Code: 2,
 		Data: ArticleVO{
@@ -204,4 +223,27 @@ func (h *ArticleHandler) PubDetail(ctx *gin.Context, uc myjwt.UserClaims) (ginx.
 			Ctime:    article.Ctime.Format(time.DateTime),
 		},
 	}, nil
+}
+
+func (h *ArticleHandler) Like(ctx *gin.Context, req LikeReq, uc myjwt.UserClaims) (ginx.Result, error) {
+	uid := uc.Uid
+	var err error
+
+	if req.Like {
+		err = h.interSvc.Like(ctx, h.biz, req.Id, uid)
+	} else {
+		err = h.interSvc.Unlike(ctx, h.biz, req.Id, uid)
+	}
+	if err != nil {
+		return ginx.Result{
+			Code: 5,
+			Msg:  "系统错误",
+		}, err
+	}
+
+	return ginx.Result{
+		Code: 2,
+		Msg:  "OK",
+	}, nil
+
 }
