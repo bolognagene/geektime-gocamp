@@ -12,6 +12,18 @@ type GORMArticleDAO struct {
 	db *gorm.DB
 }
 
+func (dao *GORMArticleDAO) GetById(ctx context.Context, id int64, uid int64) (Article, error) {
+	var article Article
+	err := dao.db.WithContext(ctx).Model(&Article{}).
+		Where("id = ? AND author_id = ?", id, uid).
+		Find(&article).Error
+	if err != nil {
+		return Article{}, err
+	}
+
+	return article, nil
+}
+
 func NewGORMArticleDAO(db *gorm.DB) ArticleDAO {
 	return &GORMArticleDAO{
 		db: db,
@@ -162,6 +174,18 @@ func (dao *GORMArticleDAO) GetByAuthor(ctx context.Context, uid int64, offset in
 		Find(&arts).Error
 
 	return arts, err
+}
+
+func (dao *GORMArticleDAO) GetPublishedById(ctx context.Context, id int64) (Article, error) {
+	var article Article
+	err := dao.db.WithContext(ctx).Model(&PublishArticle{}).
+		Where("id = ?", id).
+		Find(&article).Error
+	if err != nil {
+		return Article{}, err
+	}
+
+	return article, nil
 }
 
 // 事务传播机制是指如果当前有事务，就在事务内部执行 Insert

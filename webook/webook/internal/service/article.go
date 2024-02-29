@@ -11,7 +11,8 @@ type ArticleService interface {
 	Publish(ctx context.Context, article domain.Article) (int64, error)
 	Withdraw(ctx context.Context, article domain.Article) error
 	List(ctx context.Context, uid int64, offset int, limit int) ([]domain.Article, error)
-	Detail(context.Context, id int64, uid int64) (domain.Article, error)
+	Detail(ctx context.Context, id int64, uid int64) (domain.Article, error)
+	PubDetail(ctx context.Context, id int64, uid int64) (domain.Article, error)
 }
 
 type articleService struct {
@@ -49,6 +50,9 @@ func (s *articleService) List(ctx context.Context, uid int64, offset int, limit 
 }
 
 func (s *articleService) Detail(ctx context.Context, id int64, uid int64) (domain.Article, error) {
-	//TODO implement me
-	panic("implement me")
+	return s.repo.GetById(ctx, id, uid)
+}
+
+func (s *articleService) PubDetail(ctx context.Context, id int64, uid int64) (domain.Article, error) {
+	return s.repo.GetPublishedById(ctx, id, uid)
 }

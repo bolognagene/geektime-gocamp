@@ -1,9 +1,9 @@
 package dao
 
 import (
+	"context"
 	"database/sql"
 	"errors"
-	"github.com/gin-gonic/gin"
 	"github.com/go-sql-driver/mysql"
 	"gorm.io/gorm"
 	"time"
@@ -15,13 +15,13 @@ var (
 )
 
 type UserDAO interface {
-	Insert(ctx *gin.Context, u User) error
-	FindByEmail(ctx *gin.Context, email string) (User, error)
-	FindByPhone(ctx *gin.Context, phone string) (User, error)
-	FindById(ctx *gin.Context, id int64) (User, error)
-	FindByWechat(ctx *gin.Context, openId string) (User, error)
-	UpdateProfile(ctx *gin.Context, u User) error
-	UpdatePassword(ctx *gin.Context, u User) error
+	Insert(ctx context.Context, u User) error
+	FindByEmail(ctx context.Context, email string) (User, error)
+	FindByPhone(ctx context.Context, phone string) (User, error)
+	FindById(ctx context.Context, id int64) (User, error)
+	FindByWechat(ctx context.Context, openId string) (User, error)
+	UpdateProfile(ctx context.Context, u User) error
+	UpdatePassword(ctx context.Context, u User) error
 }
 
 type GORMUserDAO struct {
@@ -34,7 +34,7 @@ func NewUserDAO(db *gorm.DB) UserDAO {
 	}
 }
 
-func (dao *GORMUserDAO) Insert(ctx *gin.Context, u User) error {
+func (dao *GORMUserDAO) Insert(ctx context.Context, u User) error {
 	now := time.Now().UnixMilli()
 	u.Ctime = now
 	u.Utime = now
@@ -51,24 +51,24 @@ func (dao *GORMUserDAO) Insert(ctx *gin.Context, u User) error {
 
 }
 
-func (dao *GORMUserDAO) FindByEmail(ctx *gin.Context, email string) (User, error) {
+func (dao *GORMUserDAO) FindByEmail(ctx context.Context, email string) (User, error) {
 	var u User
 	err := dao.db.WithContext(ctx).Where("email = ?", email).Find(&u).Error
 	return u, err
 }
-func (dao *GORMUserDAO) FindByPhone(ctx *gin.Context, phone string) (User, error) {
+func (dao *GORMUserDAO) FindByPhone(ctx context.Context, phone string) (User, error) {
 	var u User
 	err := dao.db.WithContext(ctx).Where("phone = ?", phone).Find(&u).Error
 	return u, err
 }
 
-func (dao *GORMUserDAO) FindByWechat(ctx *gin.Context, openId string) (User, error) {
+func (dao *GORMUserDAO) FindByWechat(ctx context.Context, openId string) (User, error) {
 	var u User
 	err := dao.db.WithContext(ctx).Where("wechat_open_id = ?", openId).Find(&u).Error
 	return u, err
 }
 
-func (dao *GORMUserDAO) UpdateProfile(ctx *gin.Context, u User) error {
+func (dao *GORMUserDAO) UpdateProfile(ctx context.Context, u User) error {
 	now := time.Now().UnixMilli()
 	u.Utime = now
 	return dao.db.WithContext(ctx).Model(&u).Updates(
@@ -80,7 +80,7 @@ func (dao *GORMUserDAO) UpdateProfile(ctx *gin.Context, u User) error {
 		}).Error
 }
 
-func (dao *GORMUserDAO) UpdatePassword(ctx *gin.Context, u User) error {
+func (dao *GORMUserDAO) UpdatePassword(ctx context.Context, u User) error {
 	now := time.Now().UnixMilli()
 	u.Utime = now
 	return dao.db.WithContext(ctx).Model(&u).Updates(User{
@@ -89,13 +89,13 @@ func (dao *GORMUserDAO) UpdatePassword(ctx *gin.Context, u User) error {
 	}).Error
 }
 
-/*func (dao *GORMUserDAO) QueryProfile(ctx *gin.Context, u User) (User, error) {
+/*func (dao *GORMUserDAO) QueryProfile(ctx context.Context, u User) (User, error) {
 	err := dao.db.WithContext(ctx).First(&u).Error
 
 	return u, err
 }*/
 
-func (dao *GORMUserDAO) FindById(ctx *gin.Context, id int64) (User, error) {
+func (dao *GORMUserDAO) FindById(ctx context.Context, id int64) (User, error) {
 	var u User
 	err := dao.db.WithContext(ctx).Where("Id = ?", id).First(&u).Error
 

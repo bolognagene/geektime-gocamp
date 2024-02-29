@@ -29,17 +29,17 @@ func NewArticleHandler(svc service.ArticleService, l logger.Logger) *ArticleHand
 
 func (h *ArticleHandler) RegisterRoutes(server *gin.Engine) {
 	g := server.Group("/articles")
-	g.POST("/edit", ginx.WrapBodyAndToken[ArticleReq, myjwt.UserClaims](h.EditArticle, "EditArticle", h.l))
-	g.POST("/publish", ginx.WrapBodyAndToken[ArticleReq, myjwt.UserClaims](h.PublishArticle, "PublishArticle", h.l))
-	g.POST("/withdraw", ginx.WrapBodyAndToken[WithdrawReq, myjwt.UserClaims](h.WithdrawArticle, "WithdrawArticle", h.l))
-	g.POST("/list", ginx.WrapBodyAndToken[ListReq, myjwt.UserClaims](h.ListArticle, "ListArticle", h.l))
-	g.GET("/detail/:id", ginx.WrapToken[myjwt.UserClaims](h.DetailArticle, "DetailArticle", h.l))
+	g.POST("/edit", ginx.WrapBodyAndToken[ArticleReq, myjwt.UserClaims](h.Edit, "EditArticle", h.l))
+	g.POST("/publish", ginx.WrapBodyAndToken[ArticleReq, myjwt.UserClaims](h.Publish, "PublishArticle", h.l))
+	g.POST("/withdraw", ginx.WrapBodyAndToken[WithdrawReq, myjwt.UserClaims](h.Withdraw, "WithdrawArticle", h.l))
+	g.POST("/list", ginx.WrapBodyAndToken[ListReq, myjwt.UserClaims](h.List, "ListArticle", h.l))
+	g.GET("/detail/:id", ginx.WrapToken[myjwt.UserClaims](h.Detail, "DetailArticle", h.l))
 
 	gpub := server.Group("/pub")
-	gpub.GET("/:id", ginx.WrapToken[myjwt.UserClaims](h.DetailPubArticle, "DetailPubArticle", h.l))
+	gpub.GET("/:id", ginx.WrapToken[myjwt.UserClaims](h.PubDetail, "DetailPubArticle", h.l))
 }
 
-func (h *ArticleHandler) EditArticle(ctx *gin.Context, req ArticleReq, uc myjwt.UserClaims) (ginx.Result, error) {
+func (h *ArticleHandler) Edit(ctx *gin.Context, req ArticleReq, uc myjwt.UserClaims) (ginx.Result, error) {
 	uid := uc.Uid
 
 	id, err := h.svc.Save(ctx, req.toDomain(uid))
@@ -59,7 +59,7 @@ func (h *ArticleHandler) EditArticle(ctx *gin.Context, req ArticleReq, uc myjwt.
 
 }
 
-func (h *ArticleHandler) PublishArticle(ctx *gin.Context, req ArticleReq, uc myjwt.UserClaims) (ginx.Result, error) {
+func (h *ArticleHandler) Publish(ctx *gin.Context, req ArticleReq, uc myjwt.UserClaims) (ginx.Result, error) {
 	uid := uc.Uid
 
 	id, err := h.svc.Publish(ctx, req.toDomain(uid))
@@ -79,7 +79,7 @@ func (h *ArticleHandler) PublishArticle(ctx *gin.Context, req ArticleReq, uc myj
 
 }
 
-func (h *ArticleHandler) WithdrawArticle(ctx *gin.Context, req WithdrawReq, uc myjwt.UserClaims) (ginx.Result, error) {
+func (h *ArticleHandler) Withdraw(ctx *gin.Context, req WithdrawReq, uc myjwt.UserClaims) (ginx.Result, error) {
 	uid := uc.Uid
 
 	err := h.svc.Withdraw(ctx, domain.Article{
@@ -104,7 +104,7 @@ func (h *ArticleHandler) WithdrawArticle(ctx *gin.Context, req WithdrawReq, uc m
 
 }
 
-func (h *ArticleHandler) ListArticle(ctx *gin.Context, req ListReq, uc myjwt.UserClaims) (ginx.Result, error) {
+func (h *ArticleHandler) List(ctx *gin.Context, req ListReq, uc myjwt.UserClaims) (ginx.Result, error) {
 	uid := uc.Uid
 
 	arts, err := h.svc.List(ctx, uid, req.Offset, req.Limit)
@@ -138,7 +138,7 @@ func (h *ArticleHandler) ListArticle(ctx *gin.Context, req ListReq, uc myjwt.Use
 
 }
 
-func (h *ArticleHandler) DetailArticle(ctx *gin.Context, uc myjwt.UserClaims) (ginx.Result, error) {
+func (h *ArticleHandler) Detail(ctx *gin.Context, uc myjwt.UserClaims) (ginx.Result, error) {
 	uid := uc.Uid
 	idstr := ctx.Param("id")
 	id, err := strconv.ParseInt(idstr, 10, 64)
@@ -149,9 +149,59 @@ func (h *ArticleHandler) DetailArticle(ctx *gin.Context, uc myjwt.UserClaims) (g
 		}, fmt.Errorf("前端输入id错误，%v", err)
 	}
 
-	h.svc.Detail(ctx, id, uid)
+	article, err := h.svc.Detail(ctx, id, uid)
+	if err != nil {
+		return ginx.Result{
+			Code: 5,
+			Msg:  "系统错误",
+		}, err
+	}
+
+	return ginx.Result{
+		Code: 2,
+		Data: ArticleVO{
+			Id:       article.Id,
+			Title:    article.Title,
+			Content:  article.Content,
+			Abstract: article.Abstract(),
+			Status:   article.Status.ToUint8(),
+			Utime:    article.Utime.Format(time.DateTime),
+			Ctime:    article.Ctime.Format(time.DateTime),
+		},
+	}, nil
+
 }
 
-func (h *ArticleHandler) DetailPubArticle(ctx *gin.Context, uc myjwt.UserClaims) (ginx.Result, error) {
+func (h *ArticleHandler) PubDetail(ctx *gin.Context, uc myjwt.UserClaims) (ginx.Result, error) {
+	uid := uc.Uid
+	idstr := ctx.Param("id")
+	id, err := strconv.ParseInt(idstr, 10, 64)
+	if err != nil {
+		return ginx.Result{
+			Code: 4,
+			Msg:  "参数错误",
+		}, fmt.Errorf("前端输入id错误，%v", err)
+	}
 
+	article, err := h.svc.PubDetail(ctx, id, uid)
+	if err != nil {
+		return ginx.Result{
+			Code: 5,
+			Msg:  "系统错误",
+		}, err
+	}
+
+	return ginx.Result{
+		Code: 2,
+		Data: ArticleVO{
+			Id:       article.Id,
+			Title:    article.Title,
+			Content:  article.Content,
+			Abstract: article.Abstract(),
+			Status:   article.Status.ToUint8(),
+			Author:   article.Author.Name,
+			Utime:    article.Utime.Format(time.DateTime),
+			Ctime:    article.Ctime.Format(time.DateTime),
+		},
+	}, nil
 }

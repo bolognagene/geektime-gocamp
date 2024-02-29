@@ -257,6 +257,16 @@ func (m *MongoArticle) GetByAuthor(ctx context.Context, uid int64, offset int, l
 	panic("implement me")
 }
 
+func (m *MongoArticle) GetById(ctx context.Context, id int64, uid int64) (Article, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (m *MongoArticle) GetPublishedById(ctx context.Context, id int64) (Article, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
 func InitCollections(db *mongo.Database) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()

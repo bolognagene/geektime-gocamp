@@ -20,17 +20,19 @@ func InitWebServer() *gin.Engine {
 		// 最基础的第三方依赖
 		ioc.InitDB, ioc.InitRedis,
 		ioc.InitLogger,
-		ioc.InitMongoDB,
-		ioc.InitSnowflakeNode,
+		// For MongoDB
+		//ioc.InitMongoDB,
+		//ioc.InitSnowflakeNode,
 
 		// 初始化 DAO
 		dao.NewUserDAO,
-		//article.NewGORMArticleDAO,
-		article.NewMongoArticle,
+		article.NewGORMArticleDAO,
+		//article.NewMongoArticle,
 
 		wire.Value(time.Minute*15),
 		cache.NewUserCache,
 		cache.NewCodeCache,
+		cache.NewRedisArticleCache,
 
 		repository.NewUserRepository,
 		repository.NewCodeRepository,
