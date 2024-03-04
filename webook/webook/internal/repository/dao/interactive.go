@@ -7,10 +7,18 @@ import (
 	"time"
 )
 
+var ErrRecordNotFound = gorm.ErrRecordNotFound
+
 type InteractiveDAO interface {
 	IncrReadCnt(ctx context.Context, biz string, bizId int64) error
 	InsertLikeInfo(ctx context.Context, biz string, bizId int64, uid int64) error
 	DeleteLikeInfo(ctx context.Context, biz string, id int64, uid int64) error
+	GetLikeInfo(ctx context.Context, biz string, bizId int64, uid int64) (UserLikeBiz, error)
+	InsertCollectionInfo(ctx context.Context, biz string, bizId int64, cid int64, uid int64) error
+	DeleteCollectionInfo(ctx context.Context, biz string, bizId int64, cid int64, uid int64) error
+	GetCollectionInfo(ctx context.Context, biz string, bizId int64, uid int64) (UserCollectionBiz, error)
+	GetInteractive(ctx context.Context, biz string, bizId int64) (Interactive, error)
+	SetInteractive(ctx context.Context, biz string, bizId int64, interactive Interactive) error
 }
 
 type GORMInteractiveDAO struct {
@@ -125,6 +133,101 @@ func (dao *GORMInteractiveDAO) DeleteLikeInfo(ctx context.Context, biz string, b
 	})
 }
 
+func (dao *GORMInteractiveDAO) GetLikeInfo(ctx context.Context, biz string, bizId int64, uid int64) (UserLikeBiz, error) {
+	var likeInfo UserLikeBiz
+	err := dao.db.Where("biz = ? AND biz_id = ? AND uid = ? ANDstatus = 1", biz, bizId, uid).
+		First(&likeInfo).Error
+
+	return likeInfo, err
+}
+
+// InsertCollectionInfo 插入收藏记录，并且更新计数
+func (dao *GORMInteractiveDAO) InsertCollectionInfo(ctx context.Context, biz string, bizId int64, cid int64, uid int64) error {
+	now := time.Now().UnixMilli()
+	return dao.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 插入收藏项目
+		err := tx.Clauses(clause.OnConflict{
+			DoUpdates: clause.Assignments(map[string]any{
+				"utime":  now,
+				"status": 1,
+			}),
+		}).Create(&UserCollectionBiz{
+			Biz:    biz,
+			BizId:  bizId,
+			Uid:    uid,
+			Cid:    cid,
+			Utime:  now,
+			Ctime:  now,
+			Status: 1,
+		}).Error
+
+		if err != nil {
+			return err
+		}
+
+		// 这边就是更新数量
+		return tx.Clauses(clause.OnConflict{
+			DoUpdates: clause.Assignments(map[string]any{
+				"utime":       now,
+				"collect_cnt": gorm.Expr("collect_cnt + 1"),
+			}),
+		}).Create(&Interactive{
+			Biz:        biz,
+			BizId:      bizId,
+			Ctime:      now,
+			Utime:      now,
+			CollectCnt: 1,
+		}).Error
+	})
+}
+
+func (dao *GORMInteractiveDAO) DeleteCollectionInfo(ctx context.Context, biz string, bizId int64, cid int64, uid int64) error {
+	now := time.Now().UnixMilli()
+	return dao.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		// 两个操作
+		// 一个是软删除收藏记录
+		// 一个是减点赞数量
+		err := tx.Model(&UserCollectionBiz{}).
+			Where("biz = ? AND biz_id = ? AND uid = ? AND cid = ?", biz, bizId, uid, cid).
+			Updates(map[string]any{
+				"utime":  now,
+				"status": 0,
+			}).Error
+
+		if err != nil {
+			return err
+		}
+
+		return tx.Model(&Interactive{}).
+			Where("biz = ? AND biz_id = ?", biz, bizId).
+			Updates(map[string]any{
+				"utime":       now,
+				"collect_cnt": gorm.Expr("collect_cnt - 1"),
+			}).Error
+	})
+}
+
+func (dao *GORMInteractiveDAO) GetCollectionInfo(ctx context.Context, biz string, bizId int64, uid int64) (UserCollectionBiz, error) {
+	var collectInfo UserCollectionBiz
+	err := dao.db.Where("biz = ? AND biz_id = ? AND uid = ? AND status = 1", biz, bizId, uid).
+		First(&collectInfo).Error
+
+	return collectInfo, err
+}
+
+func (dao *GORMInteractiveDAO) GetInteractive(ctx context.Context, biz string, bizId int64) (Interactive, error) {
+	var interactive Interactive
+	err := dao.db.WithContext(ctx).Where("biz = ? AND biz_id = ?", biz, bizId).
+		First(&interactive).Error
+
+	return interactive, err
+}
+
+func (dao *GORMInteractiveDAO) SetInteractive(ctx context.Context, biz string, bizId int64, interactive Interactive) error {
+	//TODO implement me
+	panic("implement me")
+}
+
 // Interactive 正常来说，一张主表和与它有关联关系的表会共用一个DAO，
 // 所以我们就用一个 DAO 来操作
 // 假如说我要查找点赞数量前 100 的，
@@ -217,7 +320,8 @@ type UserCollectionBiz struct {
 	Biz   string `gorm:"type:varchar(128);uniqueIndex:biz_type_id_uid"`
 	// 这算是一个冗余，因为正常来说，
 	// 只需要在 Collection 中维持住 Uid 就可以
-	Uid   int64 `gorm:"uniqueIndex:biz_type_id_uid"`
-	Ctime int64
-	Utime int64
+	Uid    int64 `gorm:"uniqueIndex:biz_type_id_uid"`
+	Status uint8
+	Ctime  int64
+	Utime  int64
 }

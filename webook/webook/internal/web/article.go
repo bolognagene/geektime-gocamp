@@ -9,6 +9,7 @@ import (
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/pkg/logger"
 	"github.com/ecodeclub/ekit/slice"
 	"github.com/gin-gonic/gin"
+	"golang.org/x/sync/errgroup"
 	"strconv"
 	"time"
 )
@@ -45,6 +46,7 @@ func (h *ArticleHandler) RegisterRoutes(server *gin.Engine) {
 	// RESTful 风格
 	//gpub.GET("/like/:id", ginx.WrapToken[myjwt.UserClaims](h.PubDetail, "DetailPubArticle", h.l))
 	gpub.POST("/like", ginx.WrapBodyAndToken[LikeReq, myjwt.UserClaims](h.Like, "LikeArticle", h.l))
+	gpub.POST("/collect", ginx.WrapBodyAndToken[CollectReq, myjwt.UserClaims](h.Collect, "CollectArticle", h.l))
 }
 
 func (h *ArticleHandler) Edit(ctx *gin.Context, req ArticleReq, uc myjwt.UserClaims) (ginx.Result, error) {
@@ -191,13 +193,31 @@ func (h *ArticleHandler) PubDetail(ctx *gin.Context, uc myjwt.UserClaims) (ginx.
 		}, fmt.Errorf("前端输入id错误，%v", err)
 	}
 
-	article, err := h.svc.PubDetail(ctx, id, uid)
-	if err != nil {
-		return ginx.Result{
-			Code: 5,
-			Msg:  "系统错误",
-		}, err
-	}
+	var eg errgroup.Group
+	var article domain.Article
+	var interactive domain.Interactive
+
+	eg.Go(func() error {
+		article, err = h.svc.PubDetail(ctx, id, uid)
+		return err
+		/*if err != nil {
+			return ginx.Result{
+				Code: 5,
+				Msg:  "系统错误",
+			}, err
+		}*/
+	})
+
+	eg.Go(func() error {
+		interactive, err = h.interSvc.Get(ctx, h.biz, id, uid)
+		// 这种是容错的写法
+		//if err != nil {
+		//	// 记录日志
+		//}
+		//return nil
+		return err
+
+	})
 
 	// 增加阅读计数。
 	go func() {
@@ -213,14 +233,19 @@ func (h *ArticleHandler) PubDetail(ctx *gin.Context, uc myjwt.UserClaims) (ginx.
 	return ginx.Result{
 		Code: 2,
 		Data: ArticleVO{
-			Id:       article.Id,
-			Title:    article.Title,
-			Content:  article.Content,
-			Abstract: article.Abstract(),
-			Status:   article.Status.ToUint8(),
-			Author:   article.Author.Name,
-			Utime:    article.Utime.Format(time.DateTime),
-			Ctime:    article.Ctime.Format(time.DateTime),
+			Id:         article.Id,
+			Title:      article.Title,
+			Content:    article.Content,
+			Abstract:   article.Abstract(),
+			Status:     article.Status.ToUint8(),
+			Author:     article.Author.Name,
+			ReadCnt:    interactive.ReadCnt,
+			LikeCnt:    interactive.LikeCnt,
+			CollectCnt: interactive.CollectCnt,
+			Liked:      interactive.Liked,
+			Collected:  interactive.Collected,
+			Utime:      article.Utime.Format(time.DateTime),
+			Ctime:      article.Ctime.Format(time.DateTime),
 		},
 	}, nil
 }
@@ -246,4 +271,26 @@ func (h *ArticleHandler) Like(ctx *gin.Context, req LikeReq, uc myjwt.UserClaims
 		Msg:  "OK",
 	}, nil
 
+}
+
+func (h *ArticleHandler) Collect(ctx *gin.Context, req CollectReq, uc myjwt.UserClaims) (ginx.Result, error) {
+	uid := uc.Uid
+	var err error
+
+	if req.Collect {
+		err = h.interSvc.AddCollect(ctx, h.biz, req.Id, req.Cid, uid)
+	} else {
+		err = h.interSvc.DeleteCollect(ctx, h.biz, req.Id, req.Cid, uid)
+	}
+	if err != nil {
+		return ginx.Result{
+			Code: 5,
+			Msg:  "系统错误",
+		}, err
+	}
+
+	return ginx.Result{
+		Code: 2,
+		Msg:  "OK",
+	}, nil
 }
