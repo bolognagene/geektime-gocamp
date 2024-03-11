@@ -10,3 +10,7 @@ TplId:
 
 mongodb:
   addr: "mongodb://root:example@192.168.181.129:27017/"
+
+TopLike:
+  N: 10
+  Limit: 20

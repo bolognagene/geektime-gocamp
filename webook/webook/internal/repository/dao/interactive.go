@@ -19,6 +19,7 @@ type InteractiveDAO interface {
 	GetCollectionInfo(ctx context.Context, biz string, bizId int64, uid int64) (UserCollectionBiz, error)
 	GetInteractive(ctx context.Context, biz string, bizId int64) (Interactive, error)
 	SetInteractive(ctx context.Context, biz string, bizId int64, interactive Interactive) error
+	GetTopLike(ctx context.Context, biz string, limit int64) ([]Interactive, error)
 }
 
 type GORMInteractiveDAO struct {
@@ -226,6 +227,15 @@ func (dao *GORMInteractiveDAO) GetInteractive(ctx context.Context, biz string, b
 func (dao *GORMInteractiveDAO) SetInteractive(ctx context.Context, biz string, bizId int64, interactive Interactive) error {
 	//TODO implement me
 	panic("implement me")
+}
+
+func (dao *GORMInteractiveDAO) GetTopLike(ctx context.Context, biz string, limit int64) ([]Interactive, error) {
+	var data []Interactive
+	err := dao.db.WithContext(ctx).Model(&Interactive{}).
+		Where("biz = ?", biz).Limit(int(limit)).Order("LikeCnt DESC").
+		Find(&data).Error
+
+	return data, err
 }
 
 // Interactive 正常来说，一张主表和与它有关联关系的表会共用一个DAO，

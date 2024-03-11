@@ -5,6 +5,7 @@ import (
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/domain"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository/cache"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository/dao"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/pkg/logger"
 )
 
@@ -12,6 +13,7 @@ type InteractiveRepository interface {
 	IncrReadCnt(ctx context.Context, biz string, bizId int64) error
 	IncrLike(ctx context.Context, biz string, bizId int64, uid int64) error
 	DecrLike(ctx context.Context, biz string, bizId int64, uid int64) error
+	GetTopLike(ctx context.Context, biz string, n int64, limit int64) ([]domain.TopWithScore, error)
 	AddCollectionItem(ctx context.Context, biz string, bizId int64, cid int64, uid int64) error
 	DeleteCollectionItem(ctx context.Context, biz string, bizId int64, cid int64, uid int64) error
 	GetCnt(ctx context.Context, biz string, bizId int64) (domain.Interactive, error)
@@ -59,7 +61,24 @@ func (repo *CachedInteractiveRepository) IncrLike(ctx context.Context, biz strin
 	}
 
 	// 这种做法，你需要在 repository 层面上维持住事务
-	return repo.cache.IncrLikeCntIfPresent(ctx, biz, bizId)
+	go func() {
+		err1 := repo.cache.IncrLikeCntIfPresent(ctx, biz, bizId)
+		if err1 != nil {
+			repo.l.Debug("增加点赞计数失败", logger.String("biz", biz),
+				logger.Int64("bizId", bizId), logger.Error(err1))
+		}
+	}()
+
+	// 增加Toplike里的计数
+	go func() {
+		err2 := repo.cache.IncrTopLike(ctx, biz, bizId, web.TopLikeLimit.Load())
+		if err2 != nil {
+			repo.l.Debug("增加TopLike计数失败，可能是该文章不在TopLike中", logger.String("biz", biz),
+				logger.Int64("bizId", bizId), logger.Error(err2))
+		}
+	}()
+
+	return nil
 }
 
 func (repo *CachedInteractiveRepository) DecrLike(ctx context.Context, biz string, bizId int64, uid int64) error {
@@ -68,7 +87,55 @@ func (repo *CachedInteractiveRepository) DecrLike(ctx context.Context, biz strin
 		return err
 	}
 
-	return repo.cache.DecrLikeCntIfPresent(ctx, biz, bizId)
+	go func() {
+		err1 := repo.cache.DecrLikeCntIfPresent(ctx, biz, bizId)
+		if err1 != nil {
+			repo.l.Debug("取消点赞计数失败", logger.String("biz", biz),
+				logger.Int64("bizId", bizId), logger.Error(err1))
+		}
+	}()
+
+	// 减少Toplike里的计数
+	go func() {
+		err2 := repo.cache.DecrTopLike(ctx, biz, bizId, web.TopLikeLimit.Load())
+		if err2 != nil {
+			repo.l.Debug("减少TopLike计数失败，可能是该文章不在TopLike中", logger.String("biz", biz),
+				logger.Int64("bizId", bizId), logger.Error(err2))
+		}
+	}()
+
+	return nil
+}
+
+func (repo *CachedInteractiveRepository) GetTopLike(ctx context.Context, biz string, n int64, limit int64) ([]domain.TopWithScore, error) {
+	// 从缓存里读取TopLikeN
+	data, err := repo.cache.GetTopLike(ctx, biz, n)
+
+	if err == nil {
+		return data, nil
+	}
+
+	// 否则从数据库里查询
+	intrs, err := repo.dao.GetTopLike(ctx, biz, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	data = make([]domain.TopWithScore, len(intrs))
+	for i, z := range intrs {
+		data[i] = repo.ToTopWithScore(z)
+	}
+
+	go func() {
+		// 回写到缓存中
+		err1 := repo.cache.SetTopLike(ctx, biz, data)
+		if err1 != nil {
+			repo.l.Debug("设置toplike缓存失败", logger.String("biz", biz),
+				logger.Error(err1))
+		}
+	}()
+
+	return data[:n], nil
 }
 
 func (repo *CachedInteractiveRepository) AddCollectionItem(ctx context.Context, biz string, bizId int64, cid int64, uid int64) error {
@@ -168,5 +235,12 @@ func (c *CachedInteractiveRepository) toDomain(intr dao.Interactive) domain.Inte
 		LikeCnt:    intr.LikeCnt,
 		CollectCnt: intr.CollectCnt,
 		ReadCnt:    intr.ReadCnt,
+	}
+}
+
+func (c *CachedInteractiveRepository) ToTopWithScore(intr dao.Interactive) domain.TopWithScore {
+	return domain.TopWithScore{
+		Score:  float64(intr.LikeCnt),
+		Member: intr.BizId,
 	}
 }

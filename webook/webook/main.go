@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/service"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web"
 	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -39,6 +40,8 @@ func initViperFromLocalConfigFile() {
 		fmt.Println(in.Name, in.Op)
 		fmt.Println(viper.GetString("TplId.code"))
 		service.CodeTplId.Store(viper.GetString("TplId.code"))
+		web.TopLikeN.Store(viper.GetInt64("TopLike.N"))
+		web.TopLikeLimit.Store(viper.GetInt64("TopLike.Limit"))
 	})
 	err := viper.ReadInConfig()
 	if err != nil {

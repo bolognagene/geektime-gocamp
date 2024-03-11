@@ -29,6 +29,12 @@ type Author struct {
 	Name string
 }
 
+type BriefArticle struct {
+	Id     int64
+	Title  string
+	Author Author
+}
+
 type ArticleStatus uint8
 
 const (

@@ -13,6 +13,8 @@ import (
 var (
 	//go:embed lua/interative_incr_cnt.lua
 	luaIncrCnt string
+	//go:embed lua/increment_top_like.lua
+	luaIncrTopLike string
 )
 
 const (
@@ -36,6 +38,10 @@ type InteractiveCache interface {
 	DecrCollectCntIfPresent(ctx context.Context, biz string, bizId int64) error
 	GetCnt(ctx context.Context, biz string, id int64) (domain.Interactive, error)
 	SetCnt(ctx context.Context, biz string, bizId int64, interactive domain.Interactive) error
+	IncrTopLike(ctx context.Context, biz string, bizId int64, limit int64) error
+	DecrTopLike(ctx context.Context, biz string, bizId int64, limit int64) error
+	GetTopLike(ctx context.Context, biz string, n int64) ([]domain.TopWithScore, error)
+	SetTopLike(ctx context.Context, biz string, intrs []domain.TopWithScore) error
 }
 
 type RedisInteractiveCache struct {
@@ -134,6 +140,56 @@ func (r *RedisInteractiveCache) SetCnt(ctx context.Context, biz string, bizId in
 	return r.client.Expire(ctx, key, time.Minute*15).Err()
 }
 
+func (r *RedisInteractiveCache) IncrTopLike(ctx context.Context, biz string, bizId int64, limit int64) error {
+	return r.client.Eval(ctx, luaIncrTopLike,
+		[]string{fmt.Sprintf("top_like_%s", biz)},
+		1, bizId, limit).Err()
+}
+
+func (r *RedisInteractiveCache) DecrTopLike(ctx context.Context, biz string, bizId int64, limit int64) error {
+	return r.client.Eval(ctx, luaIncrTopLike,
+		[]string{fmt.Sprintf("top_like_%s", biz)},
+		-1, bizId, limit).Err()
+}
+
+func (r *RedisInteractiveCache) GetTopLike(ctx context.Context, biz string, n int64) ([]domain.TopWithScore, error) {
+	data, err := r.client.ZRevRangeWithScores(ctx, fmt.Sprintf("top_like_%s", biz), 0, n).Result()
+	if err == nil {
+		ts := make([]domain.TopWithScore, n)
+		for i, z := range data {
+			ts[i] = r.ToTopWithScore(z)
+		}
+		return ts, err
+	}
+	return nil, err
+}
+
+func (r *RedisInteractiveCache) SetTopLike(ctx context.Context, biz string, intrs []domain.TopWithScore) error {
+	zs := make([]redis.Z, len(intrs))
+	for i, intr := range intrs {
+		zs[i] = r.ToRedisZ(intr)
+	}
+
+	zargs := redis.ZAddArgs{
+		Members: zs,
+	}
+	return r.client.ZAddArgs(ctx, fmt.Sprintf("top_like_%s", biz), zargs).Err()
+}
+
 func (r *RedisInteractiveCache) key(biz string, bizId int64) string {
 	return fmt.Sprintf("interactive:%s:%d", biz, bizId)
+}
+
+func (r *RedisInteractiveCache) ToTopWithScore(z redis.Z) domain.TopWithScore {
+	return domain.TopWithScore{
+		Score:  z.Score,
+		Member: z.Member.(int64),
+	}
+}
+
+func (r *RedisInteractiveCache) ToRedisZ(ts domain.TopWithScore) redis.Z {
+	return redis.Z{
+		Score:  ts.Score,
+		Member: ts.Member,
+	}
 }

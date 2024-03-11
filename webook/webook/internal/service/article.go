@@ -16,7 +16,8 @@ type ArticleService interface {
 }
 
 type articleService struct {
-	repo repository.ArticleRepository
+	repo            repository.ArticleRepository
+	interactiveRepo repository.InteractiveRepository
 }
 
 func NewArticleService(repo repository.ArticleRepository) ArticleService {

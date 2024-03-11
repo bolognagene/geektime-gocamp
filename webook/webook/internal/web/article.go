@@ -9,6 +9,8 @@ import (
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/pkg/logger"
 	"github.com/ecodeclub/ekit/slice"
 	"github.com/gin-gonic/gin"
+	"github.com/spf13/viper"
+	"go.uber.org/atomic"
 	"golang.org/x/sync/errgroup"
 	"strconv"
 	"time"
@@ -23,7 +25,21 @@ type ArticleHandler struct {
 	biz      string
 }
 
+var TopLikeN atomic.Int64 = atomic.Int64{}
+var TopLikeLimit atomic.Int64 = atomic.Int64{}
+
 func NewArticleHandler(svc service.ArticleService, interSvc service.InteractiveService, l logger.Logger) *ArticleHandler {
+	topLikeN := viper.GetInt64("TopLike.N")
+	topLikeLimit := viper.GetInt64("TopLike.Limit")
+	if topLikeN == 0 {
+		topLikeN = 10
+	}
+	if topLikeLimit == 0 {
+		topLikeLimit = 100
+	}
+	TopLikeN.Store(topLikeN)
+	TopLikeLimit.Store(topLikeLimit)
+
 	return &ArticleHandler{
 		svc:      svc,
 		interSvc: interSvc,
@@ -47,9 +63,11 @@ func (h *ArticleHandler) RegisterRoutes(server *gin.Engine) {
 	//gpub.GET("/like/:id", ginx.WrapToken[myjwt.UserClaims](h.PubDetail, "DetailPubArticle", h.l))
 	gpub.POST("/like", ginx.WrapBodyAndToken[LikeReq, myjwt.UserClaims](h.Like, "LikeArticle", h.l))
 	gpub.POST("/collect", ginx.WrapBodyAndToken[CollectReq, myjwt.UserClaims](h.Collect, "CollectArticle", h.l))
+	gpub.GET("/top/like", ginx.WrapFunc(h.TopLike, "TopLikeArticle", h.l))
 }
 
 func (h *ArticleHandler) Edit(ctx *gin.Context, req ArticleReq, uc myjwt.UserClaims) (ginx.Result, error) {
+
 	uid := uc.Uid
 
 	id, err := h.svc.Save(ctx, req.toDomain(uid))
@@ -292,5 +310,23 @@ func (h *ArticleHandler) Collect(ctx *gin.Context, req CollectReq, uc myjwt.User
 	return ginx.Result{
 		Code: 2,
 		Msg:  "OK",
+	}, nil
+}
+
+func (h *ArticleHandler) TopLike(ctx *gin.Context) (ginx.Result, error) {
+
+	data, err := h.interSvc.TopLike(ctx, h.biz, TopLikeN.Load(), TopLikeLimit.Load())
+
+	if err != nil {
+		return ginx.Result{
+			Code: 5,
+			Msg:  "系统错误",
+		}, err
+	}
+
+	return ginx.Result{
+		Code: 2,
+		Msg:  "OK",
+		Data: data,
 	}, nil
 }

@@ -15,4 +15,9 @@ type Self struct {
 	Collected bool `json:"collected"`
 }
 
+type TopWithScore struct {
+	Score  float64
+	Member int64
+}
+
 // max(发送者总速率/单一分区写入速率, 发送者总速率/单一消费者速率) + buffer
