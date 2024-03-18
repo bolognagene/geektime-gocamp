@@ -232,7 +232,7 @@ func (dao *GORMInteractiveDAO) SetInteractive(ctx context.Context, biz string, b
 func (dao *GORMInteractiveDAO) GetTopLike(ctx context.Context, biz string, limit int64) ([]Interactive, error) {
 	var data []Interactive
 	err := dao.db.WithContext(ctx).Model(&Interactive{}).
-		Where("biz = ?", biz).Limit(int(limit)).Order("LikeCnt DESC").
+		Where("biz = ?", biz).Limit(int(limit)).Order("like_cnt DESC").
 		Find(&data).Error
 
 	return data, err

@@ -32,13 +32,13 @@ const (
 // key1_like_cnt => 13
 type InteractiveCache interface {
 	IncrReadCntIfPresent(ctx context.Context, biz string, bizId int64) error
-	IncrLikeCntIfPresent(ctx context.Context, biz string, bizId int64) error
+	IncrLikeCntIfPresent(ctx context.Context, biz string, bizId int64) (int, error)
 	DecrLikeCntIfPresent(ctx context.Context, biz string, bizId int64) error
 	IncrCollectCntIfPresent(ctx context.Context, biz string, bizId int64) error
 	DecrCollectCntIfPresent(ctx context.Context, biz string, bizId int64) error
 	GetCnt(ctx context.Context, biz string, id int64) (domain.Interactive, error)
 	SetCnt(ctx context.Context, biz string, bizId int64, interactive domain.Interactive) error
-	IncrTopLike(ctx context.Context, biz string, bizId int64, limit int64) error
+	IncrTopLike(ctx context.Context, biz string, bizId int64, limit int64) (int, error)
 	DecrTopLike(ctx context.Context, biz string, bizId int64, limit int64) error
 	GetTopLike(ctx context.Context, biz string, n int64) ([]domain.TopWithScore, error)
 	SetTopLike(ctx context.Context, biz string, intrs []domain.TopWithScore) error
@@ -75,10 +75,10 @@ func (r *RedisInteractiveCache) IncrReadCntIfPresent(ctx context.Context, biz st
 
 }
 
-func (r *RedisInteractiveCache) IncrLikeCntIfPresent(ctx context.Context, biz string, bizId int64) error {
+func (r *RedisInteractiveCache) IncrLikeCntIfPresent(ctx context.Context, biz string, bizId int64) (int, error) {
 	return r.client.Eval(ctx, luaIncrCnt,
 		[]string{r.key(biz, bizId)},
-		fieldLikeCnt, 1).Err()
+		fieldLikeCnt, 1).Int()
 }
 
 func (r *RedisInteractiveCache) DecrLikeCntIfPresent(ctx context.Context, biz string, bizId int64) error {
@@ -140,10 +140,10 @@ func (r *RedisInteractiveCache) SetCnt(ctx context.Context, biz string, bizId in
 	return r.client.Expire(ctx, key, time.Minute*15).Err()
 }
 
-func (r *RedisInteractiveCache) IncrTopLike(ctx context.Context, biz string, bizId int64, limit int64) error {
+func (r *RedisInteractiveCache) IncrTopLike(ctx context.Context, biz string, bizId int64, limit int64) (int, error) {
 	return r.client.Eval(ctx, luaIncrTopLike,
 		[]string{fmt.Sprintf("top_like_%s", biz)},
-		1, bizId, limit).Err()
+		1, bizId, limit).Int()
 }
 
 func (r *RedisInteractiveCache) DecrTopLike(ctx context.Context, biz string, bizId int64, limit int64) error {
@@ -154,10 +154,11 @@ func (r *RedisInteractiveCache) DecrTopLike(ctx context.Context, biz string, biz
 
 func (r *RedisInteractiveCache) GetTopLike(ctx context.Context, biz string, n int64) ([]domain.TopWithScore, error) {
 	data, err := r.client.ZRevRangeWithScores(ctx, fmt.Sprintf("top_like_%s", biz), 0, n).Result()
-	if err == nil {
+	if err == nil && len(data) != 0 {
 		ts := make([]domain.TopWithScore, n)
 		for i, z := range data {
-			ts[i] = r.ToTopWithScore(z)
+			tws, _ := r.ToTopWithScore(z)
+			ts[i] = tws
 		}
 		return ts, err
 	}
@@ -173,18 +174,32 @@ func (r *RedisInteractiveCache) SetTopLike(ctx context.Context, biz string, intr
 	zargs := redis.ZAddArgs{
 		Members: zs,
 	}
-	return r.client.ZAddArgs(ctx, fmt.Sprintf("top_like_%s", biz), zargs).Err()
+
+	err := r.client.ZAddArgs(ctx, fmt.Sprintf("top_like_%s", biz), zargs).Err()
+	if err != nil {
+		return err
+	}
+
+	return r.client.Expire(ctx, fmt.Sprintf("top_like_%s", biz), time.Minute*30).Err()
 }
 
 func (r *RedisInteractiveCache) key(biz string, bizId int64) string {
 	return fmt.Sprintf("interactive:%s:%d", biz, bizId)
 }
 
-func (r *RedisInteractiveCache) ToTopWithScore(z redis.Z) domain.TopWithScore {
+func (r *RedisInteractiveCache) ToTopWithScore(z redis.Z) (domain.TopWithScore, error) {
+	member, err := strconv.ParseInt(z.Member.(string), 10, 64)
+	if err != nil {
+		return domain.TopWithScore{
+			Score:  0,
+			Member: 0,
+		}, err
+	}
+
 	return domain.TopWithScore{
 		Score:  z.Score,
-		Member: z.Member.(int64),
-	}
+		Member: member,
+	}, nil
 }
 
 func (r *RedisInteractiveCache) ToRedisZ(ts domain.TopWithScore) redis.Z {

@@ -273,9 +273,9 @@ func (h *ArticleHandler) Like(ctx *gin.Context, req LikeReq, uc myjwt.UserClaims
 	var err error
 
 	if req.Like {
-		err = h.interSvc.Like(ctx, h.biz, req.Id, uid)
+		err = h.interSvc.Like(ctx, h.biz, req.Id, uid, TopLikeLimit.Load())
 	} else {
-		err = h.interSvc.Unlike(ctx, h.biz, req.Id, uid)
+		err = h.interSvc.Unlike(ctx, h.biz, req.Id, uid, TopLikeLimit.Load())
 	}
 	if err != nil {
 		return ginx.Result{
