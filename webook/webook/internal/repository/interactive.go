@@ -11,6 +11,7 @@ import (
 
 type InteractiveRepository interface {
 	IncrReadCnt(ctx context.Context, biz string, bizId int64) error
+	BatchIncrReadCnt(ctx context.Context, biz string, bizIds []int64) error
 	IncrLike(ctx context.Context, biz string, bizId, uid, limit int64) error
 	DecrLike(ctx context.Context, biz string, bizId, uid, limit int64) error
 	GetTopLike(ctx context.Context, biz string, n int64, limit int64) ([]domain.TopWithScore, error)
@@ -51,6 +52,20 @@ func (repo *CachedInteractiveRepository) IncrReadCnt(ctx context.Context, biz st
 	return err
 
 	//return repo.cache.IncrReadCntIfPresent(ctx, biz, bizId)
+}
+
+func (repo *CachedInteractiveRepository) BatchIncrReadCnt(ctx context.Context, biz string, bizIds []int64) error {
+	// 要考虑缓存方案了
+	// 这两个操作能不能换顺序？ —— 不能
+	err := repo.dao.BatchIncrReadCnt(ctx, biz, bizIds)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		repo.cache.BatchIncrReadCntIfPresent(ctx, biz, bizIds)
+	}()
+	return err
 }
 
 func (repo *CachedInteractiveRepository) IncrLike(ctx context.Context, biz string, bizId, uid, limit int64) error {

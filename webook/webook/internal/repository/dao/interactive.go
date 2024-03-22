@@ -11,6 +11,7 @@ var ErrRecordNotFound = gorm.ErrRecordNotFound
 
 type InteractiveDAO interface {
 	IncrReadCnt(ctx context.Context, biz string, bizId int64) error
+	BatchIncrReadCnt(ctx context.Context, biz string, bizIds []int64) error
 	InsertLikeInfo(ctx context.Context, biz string, bizId int64, uid int64) error
 	DeleteLikeInfo(ctx context.Context, biz string, id int64, uid int64) error
 	GetLikeInfo(ctx context.Context, biz string, bizId int64, uid int64) (UserLikeBiz, error)
@@ -68,6 +69,31 @@ func (dao *GORMInteractiveDAO) IncrReadCnt(ctx context.Context, biz string, bizI
 		Utime:   now,
 		Ctime:   now,
 	}).Error
+}
+
+func (dao *GORMInteractiveDAO) BatchIncrReadCnt(ctx context.Context, biz string, bizIds []int64) error {
+	// 可以用 map 合并吗？
+	// 看情况。如果一批次里面，biz 和 bizid 都相等的占很多，那么就map 合并，性能会更好
+	// 不然你合并了没有效果
+
+	// 为什么快？
+	// A：十条消息调用十次 IncrReadCnt，
+	// B 就是批量
+	// 事务本身的开销，A 是 B 的十倍
+	// 刷新 redolog, undolog, binlog 到磁盘，A 是十次，B 是一次
+	return dao.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		txDAO := NewGORMInteractiveDAO(tx)
+		for i := range bizIds {
+			err := txDAO.IncrReadCnt(ctx, biz, bizIds[i])
+			if err != nil {
+				// 记个日志就拉到
+				// 也可以 return err
+				return err
+			}
+		}
+		return nil
+	})
+
 }
 
 func (dao *GORMInteractiveDAO) InsertLikeInfo(ctx context.Context, biz string, bizId int64, uid int64) error {
