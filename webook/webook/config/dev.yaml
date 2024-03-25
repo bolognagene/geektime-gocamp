@@ -14,3 +14,7 @@ mongodb:
 TopLike:
   N: 10
   Limit: 20
+
+kafka:
+  addrs:
+  - "192.168.181.129:9094"

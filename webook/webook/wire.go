@@ -3,6 +3,7 @@
 package main
 
 import (
+	event_article "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/events/article"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository/cache"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository/dao"
@@ -10,12 +11,11 @@ import (
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/service"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/ioc"
-	"github.com/gin-gonic/gin"
 	"github.com/google/wire"
 	"time"
 )
 
-func InitWebServer() *gin.Engine {
+func InitWebServer() *App {
 	wire.Build(
 		// 最基础的第三方依赖
 		ioc.InitDB, ioc.InitRedis,
@@ -23,6 +23,14 @@ func InitWebServer() *gin.Engine {
 		// For MongoDB
 		//ioc.InitMongoDB,
 		//ioc.InitSnowflakeNode,
+		// For kafka
+		ioc.InitKafka,
+		ioc.NewSyncProducer,
+		ioc.NewConsumers,
+
+		// consumer & producer
+		event_article.NewKafkaProducer,
+		event_article.NewInteractiveReadEventBatchConsumer,
 
 		// 初始化 DAO
 		dao.NewUserDAO,
@@ -62,6 +70,8 @@ func InitWebServer() *gin.Engine {
 
 		ioc.InitWebServer,
 		ioc.InitMiddlewares,
+		// 组装我这个结构体的所有字段
+		wire.Struct(new(App), "*"),
 	)
-	return new(gin.Engine)
+	return new(App)
 }

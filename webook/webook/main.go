@@ -16,9 +16,15 @@ func main() {
 	//initViperFromReader()
 	//initViperFromProgramArgument()
 	//initViperFromRemote()
-	server := InitWebServer()
+	app := InitWebServer()
+	for _, c := range app.consumers {
+		err := c.Start()
+		if err != nil {
+			panic(err)
+		}
+	}
 
-	server.Run(":8077") // 监听并在 0.0.0.0:8077 上启动服务
+	app.web.Run(":8077") // 监听并在 0.0.0.0:8077 上启动服务
 }
 
 func initViperFromLocalConfigFile() {

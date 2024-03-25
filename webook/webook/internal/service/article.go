@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/domain"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/events/article"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository"
 )
 
@@ -16,13 +17,14 @@ type ArticleService interface {
 }
 
 type articleService struct {
-	repo            repository.ArticleRepository
-	interactiveRepo repository.InteractiveRepository
+	repo     repository.ArticleRepository
+	producer article.Producer
 }
 
-func NewArticleService(repo repository.ArticleRepository) ArticleService {
+func NewArticleService(repo repository.ArticleRepository, producer article.Producer) ArticleService {
 	return &articleService{
-		repo: repo,
+		repo:     repo,
+		producer: producer,
 	}
 }
 
