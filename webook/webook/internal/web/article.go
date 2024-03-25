@@ -238,7 +238,9 @@ func (h *ArticleHandler) PubDetail(ctx *gin.Context, uc myjwt.UserClaims) (ginx.
 	})
 
 	// 增加阅读计数。
-	go func() {
+	// 选择kafka来增加阅读计数时，不需要这个go routine
+	// 发送事件给kafka时，在service里做
+	/*go func() {
 		err1 := h.interSvc.IncrReadCnt(ctx, h.biz, article.Id)
 		if err1 != nil {
 			h.l.Error("增加阅读计数失败",
@@ -246,7 +248,7 @@ func (h *ArticleHandler) PubDetail(ctx *gin.Context, uc myjwt.UserClaims) (ginx.
 				logger.Error(err))
 		}
 
-	}()
+	}()*/
 
 	return ginx.Result{
 		Code: 2,

@@ -5,6 +5,7 @@ import (
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/domain"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/events/article"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/pkg/logger"
 )
 
 type ArticleService interface {
@@ -19,12 +20,14 @@ type ArticleService interface {
 type articleService struct {
 	repo     repository.ArticleRepository
 	producer article.Producer
+	l        logger.Logger
 }
 
-func NewArticleService(repo repository.ArticleRepository, producer article.Producer) ArticleService {
+func NewArticleService(repo repository.ArticleRepository, producer article.Producer, l logger.Logger) ArticleService {
 	return &articleService{
 		repo:     repo,
 		producer: producer,
+		l:        l,
 	}
 }
 
@@ -57,5 +60,23 @@ func (s *articleService) Detail(ctx context.Context, id int64, uid int64) (domai
 }
 
 func (s *articleService) PubDetail(ctx context.Context, id int64, uid int64) (domain.Article, error) {
-	return s.repo.GetPublishedById(ctx, id, uid)
+	// 不用kafka增加read_cnt时
+	//return s.repo.GetPublishedById(ctx, id, uid)
+
+	// 这里如果用kafka增加read_cnt时
+	art, err := s.repo.GetPublishedById(ctx, id, uid)
+	if err == nil {
+		go func() {
+			err1 := s.producer.ProduceReadEvent(ctx, article.ReadEvent{
+				Uid: uid,
+				Aid: id,
+			})
+			if err1 == nil {
+				s.l.Error("发送读者阅读事件失败", logger.Error(err1),
+					logger.Int64("Uid", uid), logger.Int64("Aid", id))
+			}
+		}()
+	}
+
+	return art, err
 }
