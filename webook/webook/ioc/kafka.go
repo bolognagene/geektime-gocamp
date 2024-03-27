@@ -8,19 +8,25 @@ import (
 )
 
 func InitKafka() sarama.Client {
-	type Config struct {
+	/*type Config struct {
 		Addr []string `yaml:"addrs"`
-	}
+	}*/
 
 	saramaCfg := sarama.NewConfig()
 	// a backwards incompatible change
 	saramaCfg.Producer.Return.Successes = true
-	var cfg Config
+	saramaCfg.Version = sarama.V3_6_0_0
+	/*var cfg Config
 	err := viper.UnmarshalKey("kafka", &cfg)
 	if err != nil {
 		panic(err)
 	}
-	client, err := sarama.NewClient(cfg.Addr, saramaCfg)
+	client, err := sarama.NewClient(cfg.Addr, saramaCfg)*/
+	addrs := []string{viper.GetString("kafka.addrs")}
+	if len(addrs) == 0 {
+		addrs = []string{"192.168.181.129:9094"}
+	}
+	client, err := sarama.NewClient(addrs, saramaCfg)
 	if err != nil {
 		panic(err)
 	}

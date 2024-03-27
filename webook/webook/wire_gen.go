@@ -49,7 +49,7 @@ func InitWebServer() *App {
 	client := ioc.InitKafka()
 	syncProducer := ioc.NewSyncProducer(client)
 	producer := article2.NewKafkaProducer(syncProducer)
-	articleService := service.NewArticleService(articleRepository, producer)
+	articleService := service.NewArticleService(articleRepository, producer, logger)
 	interactiveDAO := dao.NewGORMInteractiveDAO(db)
 	interactiveCache := cache.NewRedisInteractiveCache(cmdable)
 	interactiveRepository := repository.NewCachedInteractiveRepository(interactiveDAO, interactiveCache, logger)

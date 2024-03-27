@@ -71,7 +71,7 @@ func (s *articleService) PubDetail(ctx context.Context, id int64, uid int64) (do
 				Uid: uid,
 				Aid: id,
 			})
-			if err1 == nil {
+			if err1 != nil {
 				s.l.Error("发送读者阅读事件失败", logger.Error(err1),
 					logger.Int64("Uid", uid), logger.Int64("Aid", id))
 			}
