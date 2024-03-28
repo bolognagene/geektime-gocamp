@@ -57,6 +57,7 @@ func (h Handler[T]) ConsumeClaim(session sarama.ConsumerGroupSession, claim sara
 				logger.Int64("offset", msg.Offset))
 		} else {
 			session.MarkMessage(msg, "")
+			session.Commit() //手动提交
 		}
 
 	}

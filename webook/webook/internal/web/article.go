@@ -250,6 +250,8 @@ func (h *ArticleHandler) PubDetail(ctx *gin.Context, uc myjwt.UserClaims) (ginx.
 
 	}()*/
 
+	eg.Wait()
+
 	return ginx.Result{
 		Code: 2,
 		Data: ArticleVO{

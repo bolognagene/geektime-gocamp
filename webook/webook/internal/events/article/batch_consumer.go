@@ -60,3 +60,23 @@ func (i *InteractiveReadEventBatchConsumer) Consume(msgs []*sarama.ConsumerMessa
 	return nil
 
 }
+
+// ConsumeV1 这个不是幂等的
+// 处理真正的业务逻辑
+// 将read_cnt计数只添加到redis里
+func (i *InteractiveReadEventBatchConsumer) ConsumeV1(msgs []*sarama.ConsumerMessage, ts []ReadEvent) error {
+	ids := make([]int64, 0, len(ts))
+	for _, evt := range ts {
+		ids = append(ids, evt.Aid)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	err := i.repo.BatchIncrReadCnt(ctx, "article", ids)
+	if err != nil {
+		i.l.Error("批量增加阅读计数失败",
+			logger.Field{Key: "ids", Value: ids},
+			logger.Error(err))
+	}
+	return nil
+
+}

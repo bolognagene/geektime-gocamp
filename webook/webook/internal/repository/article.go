@@ -146,7 +146,18 @@ func (repo *CachedArticleRepository) GetPublishedById(ctx context.Context, id in
 	if err != nil {
 		return domain.Article{}, err
 	}
-	return repo.toDomainWithUser(data, user), nil
+	article = repo.toDomainWithUser(data, user)
+
+	// 回写到缓存
+	go func() {
+		err1 := repo.cache.SetPub(ctx, article, time.Minute*30)
+		if err1 != nil {
+			repo.l.Debug("GetPublishedById写入缓存失败.",
+				logger.Error(err1), logger.Int64("article ID", article.Id))
+		}
+	}()
+
+	return article, nil
 }
 
 func (repo *CachedArticleRepository) preCacheFirstArticle(ctx context.Context, data []domain.Article) error {

@@ -56,8 +56,8 @@ func InitWebServer() *App {
 	interactiveService := service.NewInteractiveService(interactiveRepository)
 	articleHandler := web.NewArticleHandler(articleService, interactiveService, logger)
 	engine := ioc.InitWebServer(v, userHandler, oAuth2WechatHandler, articleHandler)
-	interactiveReadEventBatchConsumer := article2.NewInteractiveReadEventBatchConsumer(client, interactiveRepository, logger)
-	v2 := ioc.NewConsumers(interactiveReadEventBatchConsumer)
+	interactiveReadEventConsumer := article2.NewInteractiveReadEventConsumer(client, interactiveRepository, logger)
+	v2 := ioc.NewConsumers(interactiveReadEventConsumer)
 	app := &App{
 		web:       engine,
 		consumers: v2,

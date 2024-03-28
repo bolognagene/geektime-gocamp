@@ -73,11 +73,10 @@ func (r *RedisInteractiveCache) IncrReadCntIfPresent(ctx context.Context, biz st
 		[]string{r.key(biz, bizId)},
 		// read_cnt +1
 		fieldReadCnt, 1).Err()
-
 }
 
 func (r *RedisInteractiveCache) BatchIncrReadCntIfPresent(ctx context.Context, biz string, bizIds []int64) error {
-	keys := make([]string, len(bizIds))
+	keys := make([]string, 0, len(bizIds))
 	for _, bizId := range bizIds {
 		keys = append(keys, r.key(biz, bizId))
 	}

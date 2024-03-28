@@ -15,7 +15,7 @@ func InitKafka() sarama.Client {
 	saramaCfg := sarama.NewConfig()
 	// a backwards incompatible change
 	saramaCfg.Producer.Return.Successes = true
-	saramaCfg.Version = sarama.V3_6_0_0
+	saramaCfg.Consumer.Offsets.AutoCommit.Enable = false //手动提交
 	/*var cfg Config
 	err := viper.UnmarshalKey("kafka", &cfg)
 	if err != nil {
@@ -24,7 +24,7 @@ func InitKafka() sarama.Client {
 	client, err := sarama.NewClient(cfg.Addr, saramaCfg)*/
 	addrs := []string{viper.GetString("kafka.addrs")}
 	if len(addrs) == 0 {
-		addrs = []string{"192.168.181.129:9094"}
+		addrs = []string{"localhost:9094"}
 	}
 	client, err := sarama.NewClient(addrs, saramaCfg)
 	if err != nil {
@@ -42,6 +42,9 @@ func NewSyncProducer(client sarama.Client) sarama.SyncProducer {
 }
 
 // NewConsumers 面临的问题依旧是所有的 Consumer 在这里注册一下
-func NewConsumers(c1 *article.InteractiveReadEventBatchConsumer) []events.Consumer {
+/*func NewConsumers(c1 *article.InteractiveReadEventBatchConsumer) []events.Consumer {
+	return []events.Consumer{c1}
+}*/
+func NewConsumers(c1 *article.InteractiveReadEventConsumer) []events.Consumer {
 	return []events.Consumer{c1}
 }

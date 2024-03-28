@@ -4,7 +4,7 @@ local cntKey = ARGV[1]
 -- +1 或者 -1
 local delta = tonumber(ARGV[2])
 local exists = redis.call("EXISTS", key)
-if exists == 1 or delta > 0 then
+if exists == 1 then
     redis.call("HINCRBY", key, cntKey, delta)
     -- 说明自增成功了
     return 1

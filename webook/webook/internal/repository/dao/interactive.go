@@ -162,7 +162,7 @@ func (dao *GORMInteractiveDAO) DeleteLikeInfo(ctx context.Context, biz string, b
 
 func (dao *GORMInteractiveDAO) GetLikeInfo(ctx context.Context, biz string, bizId int64, uid int64) (UserLikeBiz, error) {
 	var likeInfo UserLikeBiz
-	err := dao.db.Where("biz = ? AND biz_id = ? AND uid = ? ANDstatus = 1", biz, bizId, uid).
+	err := dao.db.Where("biz = ? AND biz_id = ? AND uid = ? AND status = 1", biz, bizId, uid).
 		First(&likeInfo).Error
 
 	return likeInfo, err

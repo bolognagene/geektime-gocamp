@@ -45,8 +45,8 @@ func (i *InteractiveReadEventConsumer) Start() error {
 // Consume 这个不是幂等的
 // 处理真正的业务逻辑
 func (i *InteractiveReadEventConsumer) Consume(msg *sarama.ConsumerMessage, t ReadEvent) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	_, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	return i.repo.IncrReadCnt(ctx, "article", t.Aid)
+	return i.repo.IncrReadCnt(context.Background(), "article", t.Aid)
 
 }
