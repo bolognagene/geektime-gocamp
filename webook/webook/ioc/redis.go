@@ -1,6 +1,7 @@
 package ioc
 
 import (
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/key_expired_event"
 	redis "github.com/redis/go-redis/v9"
 	"github.com/spf13/viper"
 )
@@ -22,4 +23,8 @@ func InitRedis() redis.Cmdable {
 	})
 
 	return client
+}
+
+func NewKeyExpiredKeys(k1 *key_expired_event.TopLikeKey) []key_expired_event.KeyExpiredEvent {
+	return []key_expired_event.KeyExpiredEvent{k1}
 }

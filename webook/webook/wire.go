@@ -4,6 +4,7 @@ package main
 
 import (
 	event_article "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/events/article"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/key_expired_event"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository/cache"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository/dao"
@@ -11,6 +12,7 @@ import (
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/service"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/ioc"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/pkg/redisx"
 	"github.com/google/wire"
 	"time"
 )
@@ -32,6 +34,12 @@ func InitWebServer() *App {
 		event_article.NewKafkaProducer,
 		//event_article.NewInteractiveReadEventBatchConsumer,
 		event_article.NewInteractiveReadEventConsumer,
+
+		// redis key expired notify
+		wire.Value(string("article")),
+		key_expired_event.NewTopLikeKey,
+		ioc.NewKeyExpiredKeys,
+		redisx.NewHandler,
 
 		// 初始化 DAO
 		dao.NewUserDAO,

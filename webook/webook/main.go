@@ -24,6 +24,8 @@ func main() {
 		}
 	}
 
+	app.rh.NotifyKeyExpiredEvent()
+
 	app.web.Run(":8077") // 监听并在 0.0.0.0:8077 上启动服务
 }
 

@@ -7,6 +7,7 @@ import (
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository/cache"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository/dao"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/pkg/logger"
+	"github.com/redis/go-redis/v9"
 )
 
 type InteractiveRepository interface {
@@ -23,18 +24,21 @@ type InteractiveRepository interface {
 }
 
 type CachedInteractiveRepository struct {
-	dao   dao.InteractiveDAO
-	cache cache.InteractiveCache
-	l     logger.Logger
+	dao    dao.InteractiveDAO
+	cache  cache.InteractiveCache
+	client redis.Cmdable
+	l      logger.Logger
 }
 
 func NewCachedInteractiveRepository(dao dao.InteractiveDAO,
 	cache cache.InteractiveCache,
+	client redis.Cmdable,
 	l logger.Logger) InteractiveRepository {
 	return &CachedInteractiveRepository{
-		dao:   dao,
-		cache: cache,
-		l:     l,
+		dao:    dao,
+		cache:  cache,
+		client: client,
+		l:      l,
 	}
 }
 
@@ -154,7 +158,11 @@ func (repo *CachedInteractiveRepository) GetTopLike(ctx context.Context, biz str
 		}
 	}()
 
-	return data[:n], nil
+	if int64(len(data)) > n {
+		return data[:n], nil
+	}
+	return data, nil
+
 }
 
 func (repo *CachedInteractiveRepository) AddCollectionItem(ctx context.Context, biz string, bizId int64, cid int64, uid int64) error {

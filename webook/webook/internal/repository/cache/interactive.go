@@ -50,6 +50,7 @@ type RedisInteractiveCache struct {
 }
 
 func NewRedisInteractiveCache(client redis.Cmdable) InteractiveCache {
+
 	return &RedisInteractiveCache{
 		client: client,
 	}
@@ -190,7 +191,7 @@ func (r *RedisInteractiveCache) SetTopLike(ctx context.Context, biz string, intr
 		return err
 	}
 
-	return r.client.Expire(ctx, fmt.Sprintf("top_like_%s", biz), time.Minute*30).Err()
+	return r.client.Expire(ctx, fmt.Sprintf("top_like_%s", biz), time.Minute*1).Err()
 }
 
 func (r *RedisInteractiveCache) key(biz string, bizId int64) string {

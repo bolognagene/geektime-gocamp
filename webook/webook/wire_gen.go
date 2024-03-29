@@ -8,6 +8,7 @@ package main
 
 import (
 	article2 "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/events/article"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/key_expired_event"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository/cache"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository/dao"
@@ -15,6 +16,7 @@ import (
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/service"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/ioc"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/pkg/redisx"
 	"time"
 )
 
@@ -52,15 +54,20 @@ func InitWebServer() *App {
 	articleService := service.NewArticleService(articleRepository, producer, logger)
 	interactiveDAO := dao.NewGORMInteractiveDAO(db)
 	interactiveCache := cache.NewRedisInteractiveCache(cmdable)
-	interactiveRepository := repository.NewCachedInteractiveRepository(interactiveDAO, interactiveCache, logger)
+	interactiveRepository := repository.NewCachedInteractiveRepository(interactiveDAO, interactiveCache, cmdable, logger)
 	interactiveService := service.NewInteractiveService(interactiveRepository)
 	articleHandler := web.NewArticleHandler(articleService, interactiveService, logger)
 	engine := ioc.InitWebServer(v, userHandler, oAuth2WechatHandler, articleHandler)
 	interactiveReadEventConsumer := article2.NewInteractiveReadEventConsumer(client, interactiveRepository, logger)
 	v2 := ioc.NewConsumers(interactiveReadEventConsumer)
+	string2 := _wireStringValue
+	topLikeKey := key_expired_event.NewTopLikeKey(interactiveRepository, logger, string2)
+	v3 := ioc.NewKeyExpiredKeys(topLikeKey)
+	handler := redisx.NewHandler(cmdable, v3)
 	app := &App{
 		web:       engine,
 		consumers: v2,
+		rh:        handler,
 	}
 	return app
 }
@@ -68,4 +75,5 @@ func InitWebServer() *App {
 var (
 	_wireDurationValue = time.Minute *
 		15
+	_wireStringValue = string("article")
 )
