@@ -1,6 +1,7 @@
 package web
 
 import (
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/codes"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/domain"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/service"
 	myjwt "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web/jwt"
@@ -127,13 +128,13 @@ func (u *UserHandler) ProfileByJWTV1(ctx *gin.Context, claims myjwt.UserClaims) 
 	user, err := u.svc.Profile(ctx, id)
 	if err != nil {
 		return ginx.Result{
-			Code: 5,
+			Code: codes.UserInternalServerError,
 			Msg:  "系统错误",
 		}, err
 	}
 
 	return ginx.Result{
-		Code: 2,
+		Code: codes.UserOK,
 		Msg:  "这是我的 Profile: \n 昵称是: " + user.Nickname + ", 生日是:" + user.Birthday + ", 简介是: " + user.Intro,
 	}, nil
 }
@@ -252,13 +253,13 @@ func (u *UserHandler) SignUpV1(ctx *gin.Context, req SignUpReq) (ginx.Result, er
 	ok, err := u.phoneExp.MatchString(req.Phone)
 	if err != nil {
 		return ginx.Result{
-			Code: 5,
+			Code: codes.UserInternalServerError,
 			Msg:  "系统错误",
 		}, err
 	}
 	if !ok {
 		return ginx.Result{
-			Code: 4,
+			Code: codes.UserInvalidInput,
 			Msg:  "你的电话号码格式不对",
 		}, nil
 	}
@@ -266,20 +267,20 @@ func (u *UserHandler) SignUpV1(ctx *gin.Context, req SignUpReq) (ginx.Result, er
 	ok, err = u.emailExp.MatchString(req.Email)
 	if err != nil {
 		return ginx.Result{
-			Code: 5,
+			Code: codes.UserInternalServerError,
 			Msg:  "系统错误",
 		}, err
 	}
 	if !ok {
 		return ginx.Result{
-			Code: 4,
+			Code: codes.UserInvalidInput,
 			Msg:  "你的邮箱格式不对",
 		}, nil
 	}
 
 	if req.Password != req.ConfirmPassword {
 		return ginx.Result{
-			Code: 4,
+			Code: codes.UserInvalidInput,
 			Msg:  "两次输入的密码不一致",
 		}, nil
 	}
@@ -287,13 +288,13 @@ func (u *UserHandler) SignUpV1(ctx *gin.Context, req SignUpReq) (ginx.Result, er
 	ok, err = u.passwordExp.MatchString(req.Password)
 	if err != nil {
 		return ginx.Result{
-			Code: 5,
+			Code: codes.UserInternalServerError,
 			Msg:  "系统错误",
 		}, err
 	}
 	if !ok {
 		return ginx.Result{
-			Code: 4,
+			Code: codes.UserInvalidInput,
 			Msg:  "密码必须大于8位，包含数字、特殊字符",
 		}, nil
 	}
@@ -310,19 +311,19 @@ func (u *UserHandler) SignUpV1(ctx *gin.Context, req SignUpReq) (ginx.Result, er
 	})
 	if err == service.ErrUserDuplicate {
 		return ginx.Result{
-			Code: 4,
+			Code: codes.UserInvalidInput,
 			Msg:  "电话号码冲突",
 		}, err
 	}
 	if err != nil {
 		return ginx.Result{
-			Code: 5,
+			Code: codes.UserInternalServerError,
 			Msg:  "系统错误",
 		}, err
 	}
 
 	return ginx.Result{
-		Code: 2,
+		Code: codes.UserOK,
 		Msg:  "注册成功",
 	}, nil
 }
@@ -431,14 +432,14 @@ func (u *UserHandler) LoginByJWTV1(ctx *gin.Context, req LoginReq) (ginx.Result,
 	})
 	if err == service.ErrInvalidUserOrPassword {
 		return ginx.Result{
-			Code: 4,
+			Code: codes.UserInvalidOrPassword,
 			Msg:  "用户名或密码不对",
 		}, err
 	}
 
 	if err != nil {
 		return ginx.Result{
-			Code: 5,
+			Code: codes.UserInternalServerError,
 			Msg:  "系统错误",
 		}, err
 	}
@@ -446,13 +447,13 @@ func (u *UserHandler) LoginByJWTV1(ctx *gin.Context, req LoginReq) (ginx.Result,
 	err = u.jwtHandler.SetLoginToken(ctx, user.Id)
 	if err != nil {
 		return ginx.Result{
-			Code: 5,
+			Code: codes.UserInternalServerError,
 			Msg:  "系统错误",
 		}, err
 	}
 
 	return ginx.Result{
-		Code: 2,
+		Code: codes.UserOK,
 		Msg:  "登录成功",
 	}, nil
 }
@@ -476,13 +477,13 @@ func (u *UserHandler) LogoutByJWTV1(ctx *gin.Context) (ginx.Result, error) {
 	err := u.jwtHandler.ClearToken(ctx)
 	if err != nil {
 		return ginx.Result{
-			Code: 5,
+			Code: codes.UserInternalServerError,
 			Msg:  "登出失败",
 		}, err
 	}
 
 	return ginx.Result{
-		Code: 2,
+		Code: codes.UserOK,
 		Msg:  "登出成功",
 	}, nil
 }
@@ -560,21 +561,21 @@ func (u *UserHandler) LoginBySMSV1(ctx *gin.Context, req LoginBySMSReq) (ginx.Re
 	ok, err := u.codeSvc.Verify(ctx, biz, req.Phone, req.Code)
 	if err == service.ErrCodeVerifyTooManyTimes {
 		return ginx.Result{
-			Code: 4,
+			Code: codes.UserTooManyVerifiedFailed,
 			Msg:  "验证码输错过多",
 		}, err
 	}
 
 	if err != nil {
 		return ginx.Result{
-			Code: 5,
+			Code: codes.UserInternalServerError,
 			Msg:  "系统错误",
 		}, err
 	}
 
 	if !ok {
 		return ginx.Result{
-			Code: 4,
+			Code: codes.UserInvalidOrPassword,
 			Msg:  "验证码错误",
 		}, nil
 	}
@@ -586,7 +587,7 @@ func (u *UserHandler) LoginBySMSV1(ctx *gin.Context, req LoginBySMSReq) (ginx.Re
 	})
 	if err != nil {
 		return ginx.Result{
-			Code: 5,
+			Code: codes.UserInternalServerError,
 			Msg:  "系统错误",
 		}, err
 	}
@@ -594,13 +595,13 @@ func (u *UserHandler) LoginBySMSV1(ctx *gin.Context, req LoginBySMSReq) (ginx.Re
 	err = u.jwtHandler.SetLoginToken(ctx, user.Id)
 	if err != nil {
 		return ginx.Result{
-			Code: 5,
+			Code: codes.UserInternalServerError,
 			Msg:  "系统错误",
 		}, err
 	}
 
 	return ginx.Result{
-		Code: 2,
+		Code: codes.UserOK,
 		Msg:  "登录成功",
 	}, nil
 }
@@ -647,19 +648,19 @@ func (u *UserHandler) SendLoginSMSCodeV1(ctx *gin.Context, req SendSMSReq) (ginx
 	if err != nil {
 		if err == service.ErrCodeSendTooMany {
 			return ginx.Result{
-				Code: 4,
+				Code: codes.UserTooManySendSMS,
 				Msg:  "验证码发送太频繁",
 			}, err
 		}
 
 		return ginx.Result{
-			Code: 5,
+			Code: codes.UserInternalServerError,
 			Msg:  "系统错误",
 		}, err
 	}
 
 	return ginx.Result{
-		Code: 2,
+		Code: codes.UserOK,
 		Msg:  "验证码发送成功",
 	}, nil
 }
@@ -813,13 +814,13 @@ func (u *UserHandler) EditProfileByJWTV1(ctx *gin.Context, req EditProfileReq, c
 	ok, err := u.nickNameExp.MatchString(req.Nickname)
 	if err != nil {
 		return ginx.Result{
-			Code: 5,
+			Code: codes.UserInternalServerError,
 			Msg:  "系统错误",
 		}, err
 	}
 	if !ok {
 		return ginx.Result{
-			Code: 4,
+			Code: codes.UserInvalidInput,
 			Msg:  "昵称格式不对",
 		}, nil
 	}
@@ -828,13 +829,13 @@ func (u *UserHandler) EditProfileByJWTV1(ctx *gin.Context, req EditProfileReq, c
 	ok, err = u.birthdayExp.MatchString(req.Birthday)
 	if err != nil {
 		return ginx.Result{
-			Code: 5,
+			Code: codes.UserInternalServerError,
 			Msg:  "系统错误",
 		}, err
 	}
 	if !ok {
 		return ginx.Result{
-			Code: 4,
+			Code: codes.UserInvalidInput,
 			Msg:  "生日格式不对",
 		}, nil
 	}
@@ -843,13 +844,13 @@ func (u *UserHandler) EditProfileByJWTV1(ctx *gin.Context, req EditProfileReq, c
 	ok, err = u.introExp.MatchString(req.Intro)
 	if err != nil {
 		return ginx.Result{
-			Code: 5,
+			Code: codes.UserInternalServerError,
 			Msg:  "系统错误",
 		}, err
 	}
 	if !ok {
 		return ginx.Result{
-			Code: 4,
+			Code: codes.UserInvalidInput,
 			Msg:  "简介格式不对",
 		}, nil
 	}
@@ -864,13 +865,13 @@ func (u *UserHandler) EditProfileByJWTV1(ctx *gin.Context, req EditProfileReq, c
 
 	if err != nil {
 		return ginx.Result{
-			Code: 5,
+			Code: codes.UserInternalServerError,
 			Msg:  "系统错误",
 		}, err
 	}
 
 	return ginx.Result{
-		Code: 2,
+		Code: codes.UserOK,
 		Msg:  "更新用户信息成功",
 	}, nil
 }
@@ -974,7 +975,7 @@ func (u *UserHandler) EditPasswordByJWTV1(ctx *gin.Context, req EditPasswordReq,
 
 	if req.Password != req.ConfirmPassword {
 		return ginx.Result{
-			Code: 4,
+			Code: codes.UserInvalidOrPassword,
 			Msg:  "两次输入的密码不一致",
 		}, nil
 	}
@@ -982,13 +983,13 @@ func (u *UserHandler) EditPasswordByJWTV1(ctx *gin.Context, req EditPasswordReq,
 	ok, err := u.passwordExp.MatchString(req.Password)
 	if err != nil {
 		return ginx.Result{
-			Code: 5,
+			Code: codes.UserInternalServerError,
 			Msg:  "系统错误",
 		}, err
 	}
 	if !ok {
 		return ginx.Result{
-			Code: 4,
+			Code: codes.UserInvalidInput,
 			Msg:  "密码必须大于8位，包含数字、特殊字符",
 		}, nil
 	}
@@ -1000,13 +1001,13 @@ func (u *UserHandler) EditPasswordByJWTV1(ctx *gin.Context, req EditPasswordReq,
 	})
 	if err != nil {
 		return ginx.Result{
-			Code: 5,
+			Code: codes.UserInternalServerError,
 			Msg:  "系统错误",
 		}, err
 	}
 
 	return ginx.Result{
-		Code: 2,
+		Code: codes.UserOK,
 		Msg:  "更改密码成功",
 	}, nil
 }
@@ -1046,7 +1047,7 @@ func (u *UserHandler) RefreshTokenV1(ctx *gin.Context) (ginx.Result, error) {
 	})
 	if err != nil || !token.Valid {
 		return ginx.Result{
-			Code: 5,
+			Code: codes.UserUnauthorized,
 			Msg:  strconv.Itoa(http.StatusUnauthorized),
 		}, err
 	}
@@ -1054,7 +1055,7 @@ func (u *UserHandler) RefreshTokenV1(ctx *gin.Context) (ginx.Result, error) {
 	// 在验证是否登出，看ssid是否在redis里
 	if u.jwtHandler.CheckSession(ctx, rc.Ssid) {
 		return ginx.Result{
-			Code: 5,
+			Code: codes.UserUnauthorized,
 			Msg:  strconv.Itoa(http.StatusUnauthorized),
 		}, err
 	}
@@ -1063,13 +1064,13 @@ func (u *UserHandler) RefreshTokenV1(ctx *gin.Context) (ginx.Result, error) {
 	err = u.jwtHandler.SetJWTToken(ctx, rc.Uid, rc.Ssid)
 	if err != nil {
 		return ginx.Result{
-			Code: 5,
+			Code: codes.UserUnauthorized,
 			Msg:  strconv.Itoa(http.StatusUnauthorized),
 		}, err
 	}
 
 	return ginx.Result{
-		Code: 2,
+		Code: codes.UserOK,
 		Msg:  "刷新成功",
 	}, nil
 }

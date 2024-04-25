@@ -6,6 +6,7 @@ import (
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/events/article"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/pkg/logger"
+	"time"
 )
 
 type ArticleService interface {
@@ -13,6 +14,8 @@ type ArticleService interface {
 	Publish(ctx context.Context, article domain.Article) (int64, error)
 	Withdraw(ctx context.Context, article domain.Article) error
 	List(ctx context.Context, uid int64, offset int, limit int) ([]domain.Article, error)
+	// ListPub 只会取 start 七天内的数据
+	ListPub(ctx context.Context, start time.Time, offset, limit int) ([]domain.Article, error)
 	Detail(ctx context.Context, id int64, uid int64) (domain.Article, error)
 	PubDetail(ctx context.Context, id int64, uid int64) (domain.Article, error)
 }
@@ -79,4 +82,8 @@ func (s *articleService) PubDetail(ctx context.Context, id int64, uid int64) (do
 	}
 
 	return art, err
+}
+
+func (s *articleService) ListPub(ctx context.Context, start time.Time, offset, limit int) ([]domain.Article, error) {
+	return s.repo.ListPub(ctx, start, offset, limit)
 }

@@ -14,41 +14,7 @@ import (
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/ioc"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/pkg/redisx"
 	"github.com/google/wire"
-)
-
-var interactiveSvcProvider = wire.NewSet(
-	service.NewInteractiveService,
-	repository.NewCachedInteractiveRepository,
-	dao.NewGORMInteractiveDAO,
-	cache.NewRedisInteractiveCache,
-)
-
-var articleServiceSet = wire.NewSet(
-	service.NewArticleService,
-	repository.NewCachedArticleRepository,
-	article.NewGORMArticleDAO,
-	cache.NewRedisArticleCache,
-	//article.NewMongoArticle, //MongoDB
-	//article.NewOssDAO, //OSS
-)
-
-var rankingServiceSet = wire.NewSet(
-	service.NewBatchRankingService,
-	repository.NewCachedRankingRepository,
-	cache.NewRedisRankingCache,
-)
-
-var userServiceSet = wire.NewSet(
-	service.NewUserService,
-	repository.NewUserRepository,
-	dao.NewUserDAO,
-	ioc.InitUserCache, //包含一个具体的时间，所以需要另写一个函数
-)
-
-var codeSvcProvider = wire.NewSet(
-	service.NewCodeService,
-	repository.NewCodeRepository,
-	cache.NewCodeCache,
+	"time"
 )
 
 func InitWebServer() *App {
@@ -75,18 +41,30 @@ func InitWebServer() *App {
 		ioc.NewKeyExpiredKeys,
 		redisx.NewHandler,
 
-		// Service
-		interactiveSvcProvider,
-		articleServiceSet,
-		rankingServiceSet,
-		codeSvcProvider,
-		userServiceSet,
+		// 初始化 DAO
+		dao.NewUserDAO,
+		article.NewGORMArticleDAO,
+		//article.NewMongoArticle,
+		dao.NewGORMInteractiveDAO,
 
+		wire.Value(time.Minute*15),
+		cache.NewUserCache,
+		cache.NewCodeCache,
+		cache.NewRedisArticleCache,
+		cache.NewRedisInteractiveCache,
+
+		repository.NewUserRepository,
+		repository.NewCodeRepository,
+		repository.NewCachedArticleRepository,
+		repository.NewCachedInteractiveRepository,
+
+		service.NewUserService,
+		service.NewCodeService,
+		service.NewArticleService,
 		ioc.InitWechatService,
 		// 直接基于内存实现
 		ioc.InitSMSService,
-		ioc.InitRankingJob,
-		ioc.InitJobs,
+		service.NewInteractiveService,
 
 		ioc.NewWechatHandlerConfig,
 		ioc.InitRedisJWTHander,

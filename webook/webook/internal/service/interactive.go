@@ -15,6 +15,7 @@ type InteractiveService interface {
 	DeleteCollect(ctx context.Context, biz string, bizId int64, cid int64, uid int64) error
 	Get(ctx context.Context, biz string, bizId int64, uid int64) (domain.Interactive, error)
 	TopLike(ctx context.Context, biz string, n, limit int64) ([]domain.TopWithScore, error)
+	GetByIds(ctx context.Context, biz string, bizIds []int64) (map[int64]domain.Interactive, error)
 }
 
 type interactiveService struct {
@@ -84,4 +85,9 @@ func (svc *interactiveService) Get(ctx context.Context, biz string, bizId int64,
 
 func (svc *interactiveService) TopLike(ctx context.Context, biz string, n, limit int64) ([]domain.TopWithScore, error) {
 	return svc.repo.GetTopLike(ctx, biz, n, limit)
+}
+
+func (svc *interactiveService) GetByIds(ctx context.Context, biz string, bizIds []int64) (map[int64]domain.Interactive, error) {
+	//TODO implement me
+	panic("implement me")
 }

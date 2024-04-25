@@ -4,9 +4,19 @@ import (
 	myjwt "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web/jwt"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/pkg/logger"
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus"
 	"net/http"
 	"strconv"
 )
+
+// 增加prometheus对返回错误码个数的统计
+var vector *prometheus.CounterVec
+
+func InitCounter(opts prometheus.CounterOpts) {
+	vector = prometheus.NewCounterVec(opts, []string{"method", "code"})
+	prometheus.MustRegister(vector)
+	// 你可以考虑使用 code, method, 命中路由，HTTP 状态码
+}
 
 func WrapToken[C any](fn func(ctx *gin.Context, uc C) (Result, error), method string, l logger.Logger) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
@@ -56,6 +66,7 @@ func WrapToken[C any](fn func(ctx *gin.Context, uc C) (Result, error), method st
 
 		ctx.JSON(http.StatusOK, res)
 		// 再执行一些东西
+		vector.WithLabelValues(method, strconv.Itoa(res.Code)).Inc()
 	}
 }
 
@@ -112,6 +123,7 @@ func WrapBodyAndToken[Req any, C any](fn func(ctx *gin.Context, req Req, uc C) (
 		}
 
 		ctx.JSON(http.StatusOK, res)
+		vector.WithLabelValues(method, strconv.Itoa(res.Code)).Inc()
 	}
 }
 
@@ -140,6 +152,7 @@ func WrapBody[T any](fn func(ctx *gin.Context, req T) (Result, error), method st
 		}
 
 		ctx.JSON(http.StatusOK, res)
+		vector.WithLabelValues(method, strconv.Itoa(res.Code)).Inc()
 	}
 }
 
@@ -160,6 +173,7 @@ func WrapFunc(fn func(ctx *gin.Context) (Result, error), method string, l logger
 		}
 
 		ctx.JSON(http.StatusOK, res)
+		vector.WithLabelValues(method, strconv.Itoa(res.Code)).Inc()
 	}
 }
 

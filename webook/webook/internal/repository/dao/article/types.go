@@ -2,6 +2,7 @@ package article
 
 import (
 	"context"
+	"time"
 )
 
 type ArticleDAO interface {
@@ -13,6 +14,7 @@ type ArticleDAO interface {
 	GetByAuthor(ctx context.Context, uid int64, offset int, limit int) ([]Article, error)
 	GetById(ctx context.Context, id int64, uid int64) (Article, error)
 	GetPublishedById(ctx context.Context, id int64) (Article, error)
+	ListPub(ctx context.Context, start time.Time, offset int, limit int) ([]Article, error)
 }
 
 // Article 这是制作库的

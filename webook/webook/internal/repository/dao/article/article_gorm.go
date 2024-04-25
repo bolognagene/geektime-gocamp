@@ -188,6 +188,20 @@ func (dao *GORMArticleDAO) GetPublishedById(ctx context.Context, id int64) (Arti
 	return article, nil
 }
 
+func (dao *GORMArticleDAO) ListPub(ctx context.Context, start time.Time, offset int, limit int) ([]Article, error) {
+	var arts []Article
+	err := dao.db.WithContext(ctx).Model(&Article{}).
+		Where("utime < ?", start.UnixMilli()).Offset(offset).Limit(limit).
+		Order("utime DESC").
+		//Order(clause.OrderBy{Columns: []clause.OrderByColumn{
+		//	{Column: clause.Column{Name: "utime"}, Desc: true},
+		//	{Column: clause.Column{Name: "ctime"}, Desc: false},
+		//}}).
+		Find(&arts).Error
+
+	return arts, err
+}
+
 // 事务传播机制是指如果当前有事务，就在事务内部执行 Insert
 // 如果没有事务：
 // 1. 开启事务，执行 Insert

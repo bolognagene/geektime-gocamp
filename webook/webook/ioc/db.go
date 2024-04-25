@@ -2,11 +2,13 @@ package ioc
 
 import (
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository/dao"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/pkg/gormx"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/pkg/logger"
 	"github.com/spf13/viper"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	glogger "gorm.io/gorm/logger"
+	"gorm.io/plugin/prometheus"
 	"time"
 )
 
@@ -38,6 +40,25 @@ func InitDB(l logger.Logger) *gorm.DB {
 		// 一旦初始化过程出错，应用就不要启动了
 		panic(err)
 	}
+
+	// Gorm的prometheus监控插件，用来监控数据库的一些参数（空闲连接啥的）
+	err = db.Use(prometheus.New(prometheus.Config{
+		DBName:          "webook",
+		RefreshInterval: 15,
+		StartServer:     false,
+		MetricsCollector: []prometheus.MetricsCollector{
+			&prometheus.MySQL{
+				VariableNames: []string{"Threads_running"},
+			},
+		},
+	}))
+	if err != nil {
+		panic(err)
+	}
+
+	// Gormx的prometheus监控SQL执行时间
+	gcb := gormx.NewGormCallbacks(db, "Golang", "Webook", "webook")
+	db.Use(gcb)
 
 	err = dao.InitTable(db)
 	if err != nil {

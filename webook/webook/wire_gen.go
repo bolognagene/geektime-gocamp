@@ -17,7 +17,7 @@ import (
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/ioc"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/pkg/redisx"
-	"time"
+	"github.com/google/wire"
 )
 
 import (
@@ -33,8 +33,7 @@ func InitWebServer() *App {
 	v := ioc.InitMiddlewares(cmdable, jwtHandler, logger)
 	db := ioc.InitDB(logger)
 	userDAO := dao.NewUserDAO(db)
-	duration := _wireDurationValue
-	userCache := cache.NewUserCache(cmdable, duration)
+	userCache := ioc.InitUserCache(cmdable)
 	userRepository := repository.NewUserRepository(userDAO, userCache)
 	userService := service.NewUserService(userRepository)
 	codeCache := cache.NewCodeCache(cmdable)
@@ -64,16 +63,30 @@ func InitWebServer() *App {
 	topLikeKey := key_expired_event.NewTopLikeKey(interactiveRepository, logger, string2)
 	v3 := ioc.NewKeyExpiredKeys(topLikeKey)
 	handler := redisx.NewHandler(cmdable, v3)
+	rankingService := service.NewBatchRankingService(articleService, interactiveService)
+	rankingJob := ioc.InitRankingJob(rankingService)
+	cron := ioc.InitJobs(logger, rankingJob)
 	app := &App{
 		web:       engine,
 		consumers: v2,
 		rh:        handler,
+		cron:      cron,
 	}
 	return app
 }
 
 var (
-	_wireDurationValue = time.Minute *
-		15
 	_wireStringValue = string("article")
 )
+
+// wire.go:
+
+var interactiveSvcProvider = wire.NewSet(service.NewInteractiveService, repository.NewCachedInteractiveRepository, dao.NewGORMInteractiveDAO, cache.NewRedisInteractiveCache)
+
+var articleServiceSet = wire.NewSet(service.NewArticleService, repository.NewCachedArticleRepository, article.NewGORMArticleDAO, cache.NewRedisArticleCache)
+
+var rankingServiceSet = wire.NewSet(service.NewBatchRankingService, repository.NewCachedRankingRepository, cache.NewRedisRankingCache)
+
+var userServiceSet = wire.NewSet(service.NewUserService, repository.NewUserRepository, dao.NewUserDAO, ioc.InitUserCache)
+
+var codeSvcProvider = wire.NewSet(service.NewCodeService, repository.NewCodeRepository, cache.NewCodeCache)

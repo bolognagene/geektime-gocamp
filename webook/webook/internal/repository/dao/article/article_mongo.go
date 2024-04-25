@@ -267,6 +267,11 @@ func (m *MongoArticle) GetPublishedById(ctx context.Context, id int64) (Article,
 	panic("implement me")
 }
 
+func (m *MongoArticle) ListPub(ctx context.Context, start time.Time, offset int, limit int) ([]Article, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
 func InitCollections(db *mongo.Database) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
 	defer cancel()

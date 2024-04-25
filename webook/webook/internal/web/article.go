@@ -2,6 +2,7 @@ package web
 
 import (
 	"fmt"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/codes"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/domain"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/service"
 	myjwt "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web/jwt"
@@ -74,13 +75,13 @@ func (h *ArticleHandler) Edit(ctx *gin.Context, req ArticleReq, uc myjwt.UserCla
 
 	if err != nil {
 		return ginx.Result{
-			Code: 5,
+			Code: codes.ArticleInternalServerError,
 			Msg:  "系统错误",
 		}, err
 	}
 
 	return ginx.Result{
-		Code: 2,
+		Code: codes.ArticleOK,
 		Msg:  "创建成功",
 		Data: id,
 	}, nil
@@ -94,13 +95,13 @@ func (h *ArticleHandler) Publish(ctx *gin.Context, req ArticleReq, uc myjwt.User
 
 	if err != nil {
 		return ginx.Result{
-			Code: 5,
+			Code: codes.ArticleInternalServerError,
 			Msg:  "系统错误",
 		}, err
 	}
 
 	return ginx.Result{
-		Code: 2,
+		Code: codes.ArticleOK,
 		Msg:  "发表成功",
 		Data: id,
 	}, nil
@@ -119,13 +120,13 @@ func (h *ArticleHandler) Withdraw(ctx *gin.Context, req WithdrawReq, uc myjwt.Us
 
 	if err != nil {
 		return ginx.Result{
-			Code: 5,
+			Code: codes.ArticleInternalServerError,
 			Msg:  "系统错误",
 		}, err
 	}
 
 	return ginx.Result{
-		Code: 2,
+		Code: codes.ArticleOK,
 		Msg:  "withdraw成功",
 		Data: req.Id,
 	}, nil
@@ -138,7 +139,7 @@ func (h *ArticleHandler) List(ctx *gin.Context, req ListReq, uc myjwt.UserClaims
 	arts, err := h.svc.List(ctx, uid, req.Offset, req.Limit)
 	if err != nil {
 		return ginx.Result{
-			Code: 5,
+			Code: codes.ArticleInternalServerError,
 			Msg:  "系统错误",
 		}, err
 	}
@@ -146,7 +147,7 @@ func (h *ArticleHandler) List(ctx *gin.Context, req ListReq, uc myjwt.UserClaims
 	// 比如说，简单的摘要就是前几句话
 	// 强大的摘要是 AI 帮你生成的
 	return ginx.Result{
-		Code: 2,
+		Code: codes.ArticleOK,
 		Data: slice.Map[domain.Article, ArticleVO](arts,
 			func(idx int, src domain.Article) ArticleVO {
 				return ArticleVO{
@@ -172,7 +173,7 @@ func (h *ArticleHandler) Detail(ctx *gin.Context, uc myjwt.UserClaims) (ginx.Res
 	id, err := strconv.ParseInt(idstr, 10, 64)
 	if err != nil {
 		return ginx.Result{
-			Code: 4,
+			Code: codes.ArticleInvalidInput,
 			Msg:  "参数错误",
 		}, fmt.Errorf("前端输入id错误，%v", err)
 	}
@@ -180,13 +181,13 @@ func (h *ArticleHandler) Detail(ctx *gin.Context, uc myjwt.UserClaims) (ginx.Res
 	article, err := h.svc.Detail(ctx, id, uid)
 	if err != nil {
 		return ginx.Result{
-			Code: 5,
+			Code: codes.ArticleInternalServerError,
 			Msg:  "系统错误",
 		}, err
 	}
 
 	return ginx.Result{
-		Code: 2,
+		Code: codes.ArticleOK,
 		Data: ArticleVO{
 			Id:       article.Id,
 			Title:    article.Title,
@@ -206,7 +207,7 @@ func (h *ArticleHandler) PubDetail(ctx *gin.Context, uc myjwt.UserClaims) (ginx.
 	id, err := strconv.ParseInt(idstr, 10, 64)
 	if err != nil {
 		return ginx.Result{
-			Code: 4,
+			Code: codes.ArticleInvalidInput,
 			Msg:  "参数错误",
 		}, fmt.Errorf("前端输入id错误，%v", err)
 	}
@@ -253,7 +254,7 @@ func (h *ArticleHandler) PubDetail(ctx *gin.Context, uc myjwt.UserClaims) (ginx.
 	eg.Wait()
 
 	return ginx.Result{
-		Code: 2,
+		Code: codes.ArticleOK,
 		Data: ArticleVO{
 			Id:         article.Id,
 			Title:      article.Title,
@@ -283,13 +284,13 @@ func (h *ArticleHandler) Like(ctx *gin.Context, req LikeReq, uc myjwt.UserClaims
 	}
 	if err != nil {
 		return ginx.Result{
-			Code: 5,
+			Code: codes.ArticleInternalServerError,
 			Msg:  "系统错误",
 		}, err
 	}
 
 	return ginx.Result{
-		Code: 2,
+		Code: codes.ArticleOK,
 		Msg:  "OK",
 	}, nil
 
@@ -306,13 +307,13 @@ func (h *ArticleHandler) Collect(ctx *gin.Context, req CollectReq, uc myjwt.User
 	}
 	if err != nil {
 		return ginx.Result{
-			Code: 5,
+			Code: codes.ArticleInternalServerError,
 			Msg:  "系统错误",
 		}, err
 	}
 
 	return ginx.Result{
-		Code: 2,
+		Code: codes.ArticleOK,
 		Msg:  "OK",
 	}, nil
 }
@@ -323,13 +324,13 @@ func (h *ArticleHandler) TopLike(ctx *gin.Context) (ginx.Result, error) {
 
 	if err != nil {
 		return ginx.Result{
-			Code: 5,
+			Code: codes.ArticleInternalServerError,
 			Msg:  "系统错误",
 		}, err
 	}
 
 	return ginx.Result{
-		Code: 2,
+		Code: codes.ArticleOK,
 		Msg:  "OK",
 		Data: data,
 	}, nil

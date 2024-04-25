@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/service"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web"
@@ -9,6 +10,7 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	_ "github.com/spf13/viper/remote"
+	"time"
 )
 
 func main() {
@@ -26,7 +28,23 @@ func main() {
 
 	app.rh.NotifyKeyExpiredEvent()
 
+	app.cron.Start()
+
 	app.web.Run(":8077") // 监听并在 0.0.0.0:8077 上启动服务
+
+	// 这里是优雅退出所有的程序
+	// 一分钟内你要关完，要退出
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	ctx = app.cron.Stop()
+	// 想办法 close ？？
+	// 这边可以考虑超时强制退出，防止有些任务，执行特别长的时间
+	tm := time.NewTimer(time.Minute * 10)
+	select {
+	case <-tm.C:
+	case <-ctx.Done():
+	}
 }
 
 func initViperFromLocalConfigFile() {
