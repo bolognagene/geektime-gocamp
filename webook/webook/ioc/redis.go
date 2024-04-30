@@ -3,6 +3,7 @@ package ioc
 import (
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/key_expired_event"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/pkg/redisx"
+	rlock "github.com/gotomicro/redis-lock"
 	"github.com/prometheus/client_golang/prometheus"
 	redis "github.com/redis/go-redis/v9"
 	"github.com/spf13/viper"
@@ -37,4 +38,8 @@ func InitRedis() redis.Cmdable {
 
 func NewKeyExpiredKeys(k1 *key_expired_event.TopLikeKey) []key_expired_event.KeyExpiredEvent {
 	return []key_expired_event.KeyExpiredEvent{k1}
+}
+
+func InitRLockClient(cmd redis.Cmdable) *rlock.Client {
+	return rlock.NewClient(cmd)
 }

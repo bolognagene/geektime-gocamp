@@ -2,14 +2,19 @@ package ioc
 
 import (
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/job"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository/cache"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/service"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/pkg/logger"
+	rlock "github.com/gotomicro/redis-lock"
+	"github.com/redis/go-redis/v9"
 	"github.com/robfig/cron/v3"
 	"time"
 )
 
-func InitRankingJob(svc service.RankingService) *job.RankingJob {
-	return job.NewRankingJob(svc, time.Second*30)
+func InitRankingJob(svc service.RankingService,
+	client *rlock.Client, l logger.Logger) *job.RankingJob {
+	return job.NewRankingJob(svc, time.Second*30,
+		client, "cronjob:ranking:topN", l)
 }
 
 func InitJobs(l logger.Logger, rankingJob *job.RankingJob) *cron.Cron {
@@ -21,4 +26,12 @@ func InitJobs(l logger.Logger, rankingJob *job.RankingJob) *cron.Cron {
 		panic(err)
 	}
 	return res
+}
+
+func InitRedisRankingCache(client redis.Cmdable) *cache.RedisRankingCache {
+	return cache.NewRedisRankingCache(client, "RankingTopN", time.Minute*10)
+}
+
+func InitLocalRankingCache() *cache.LocalRankingCache {
+	return cache.NewLocalRankingCache(time.Minute * 10)
 }

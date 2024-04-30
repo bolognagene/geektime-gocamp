@@ -21,6 +21,7 @@ type InteractiveRepository interface {
 	GetCnt(ctx context.Context, biz string, bizId int64) (domain.Interactive, error)
 	Liked(ctx context.Context, biz string, bizId int64, uid int64) (bool, error)
 	Collected(ctx context.Context, biz string, bizId int64, uid int64) (bool, error)
+	GetByIds(ctx context.Context, biz string, bizIds []int64) (map[int64]domain.Interactive, error)
 }
 
 type CachedInteractiveRepository struct {
@@ -249,6 +250,20 @@ func (repo *CachedInteractiveRepository) Collected(ctx context.Context, biz stri
 
 }
 
+func (repo *CachedInteractiveRepository) GetByIds(ctx context.Context, biz string, bizIds []int64) (map[int64]domain.Interactive, error) {
+	interactives := make(map[int64]domain.Interactive)
+	intrs, err := repo.dao.GetByIds(ctx, biz, bizIds)
+	if err != nil {
+		return interactives, err
+	}
+
+	for id, intr := range intrs {
+		interactives[id] = repo.toDomain(intr)
+	}
+
+	return interactives, nil
+}
+
 // 正常来说，参数必然不用指针：方法不要修改参数，通过返回值来修改参数
 // 返回值就看情况。如果是指针实现了接口，那么就返回指针
 // 如果返回值很大，你不想值传递引发复制问题，那么还是返回指针
@@ -257,7 +272,7 @@ func (repo *CachedInteractiveRepository) Collected(ctx context.Context, biz stri
 // 最简原则：
 // 1. 接收器永远用指针
 // 2. 输入输出都用结构体
-func (c *CachedInteractiveRepository) toDomain(intr dao.Interactive) domain.Interactive {
+func (repo *CachedInteractiveRepository) toDomain(intr dao.Interactive) domain.Interactive {
 	return domain.Interactive{
 		LikeCnt:    intr.LikeCnt,
 		CollectCnt: intr.CollectCnt,
@@ -265,7 +280,7 @@ func (c *CachedInteractiveRepository) toDomain(intr dao.Interactive) domain.Inte
 	}
 }
 
-func (c *CachedInteractiveRepository) ToTopWithScore(intr dao.Interactive) domain.TopWithScore {
+func (repo *CachedInteractiveRepository) ToTopWithScore(intr dao.Interactive) domain.TopWithScore {
 	return domain.TopWithScore{
 		Score:  float64(intr.LikeCnt),
 		Member: intr.BizId,

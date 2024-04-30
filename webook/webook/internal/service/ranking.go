@@ -25,10 +25,13 @@ type BatchRankingService struct {
 	scoreFunc func(t time.Time, likeCnt int64) float64
 }
 
-func NewBatchRankingService(artSvc ArticleService, intrSvc InteractiveService) RankingService {
+func NewBatchRankingService(artSvc ArticleService,
+	intrSvc InteractiveService,
+	repo repository.RankingRepository) RankingService {
 	return &BatchRankingService{
 		artSvc:    artSvc,
 		intrSvc:   intrSvc,
+		repo:      repo,
 		n:         100,
 		batchSize: 100,
 		biz:       "article",

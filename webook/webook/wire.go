@@ -35,7 +35,8 @@ var articleServiceSet = wire.NewSet(
 var rankingServiceSet = wire.NewSet(
 	service.NewBatchRankingService,
 	repository.NewCachedRankingRepository,
-	cache.NewRedisRankingCache,
+	ioc.InitLocalRankingCache,
+	ioc.InitRedisRankingCache,
 )
 
 var userServiceSet = wire.NewSet(
@@ -50,6 +51,13 @@ var codeSvcProvider = wire.NewSet(
 	repository.NewCodeRepository,
 	cache.NewCodeCache,
 )
+
+/*var cronJobSvcProvider = wire.NewSet(
+	wire.Value(time.Duration(time.Minute)),
+	schedule_service.NewPreemptCronJobService,
+	schedule_repo.NewPreemptCronJobRepository,
+	schedule_dao.NewGORMCronJobDAO,
+)*/
 
 func InitWebServer() *App {
 	wire.Build(
@@ -74,6 +82,7 @@ func InitWebServer() *App {
 		key_expired_event.NewTopLikeKey,
 		ioc.NewKeyExpiredKeys,
 		redisx.NewHandler,
+		ioc.InitRLockClient,
 
 		// Service
 		interactiveSvcProvider,
@@ -81,6 +90,7 @@ func InitWebServer() *App {
 		rankingServiceSet,
 		codeSvcProvider,
 		userServiceSet,
+		//cronJobSvcProvider,
 
 		ioc.InitWechatService,
 		// 直接基于内存实现

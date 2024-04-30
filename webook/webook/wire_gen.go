@@ -63,8 +63,12 @@ func InitWebServer() *App {
 	topLikeKey := key_expired_event.NewTopLikeKey(interactiveRepository, logger, string2)
 	v3 := ioc.NewKeyExpiredKeys(topLikeKey)
 	handler := redisx.NewHandler(cmdable, v3)
-	rankingService := service.NewBatchRankingService(articleService, interactiveService)
-	rankingJob := ioc.InitRankingJob(rankingService)
+	redisRankingCache := ioc.InitRedisRankingCache(cmdable)
+	localRankingCache := ioc.InitLocalRankingCache()
+	rankingRepository := repository.NewCachedRankingRepository(redisRankingCache, localRankingCache)
+	rankingService := service.NewBatchRankingService(articleService, interactiveService, rankingRepository)
+	rlockClient := ioc.InitRLockClient(cmdable)
+	rankingJob := ioc.InitRankingJob(rankingService, rlockClient, logger)
 	cron := ioc.InitJobs(logger, rankingJob)
 	app := &App{
 		web:       engine,
@@ -85,7 +89,7 @@ var interactiveSvcProvider = wire.NewSet(service.NewInteractiveService, reposito
 
 var articleServiceSet = wire.NewSet(service.NewArticleService, repository.NewCachedArticleRepository, article.NewGORMArticleDAO, cache.NewRedisArticleCache)
 
-var rankingServiceSet = wire.NewSet(service.NewBatchRankingService, repository.NewCachedRankingRepository, cache.NewRedisRankingCache)
+var rankingServiceSet = wire.NewSet(service.NewBatchRankingService, repository.NewCachedRankingRepository, ioc.InitLocalRankingCache, ioc.InitRedisRankingCache)
 
 var userServiceSet = wire.NewSet(service.NewUserService, repository.NewUserRepository, dao.NewUserDAO, ioc.InitUserCache)
 

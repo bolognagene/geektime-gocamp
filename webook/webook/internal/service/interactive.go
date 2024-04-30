@@ -88,6 +88,5 @@ func (svc *interactiveService) TopLike(ctx context.Context, biz string, n, limit
 }
 
 func (svc *interactiveService) GetByIds(ctx context.Context, biz string, bizIds []int64) (map[int64]domain.Interactive, error) {
-	//TODO implement me
-	panic("implement me")
+	return svc.repo.GetByIds(ctx, biz, bizIds)
 }

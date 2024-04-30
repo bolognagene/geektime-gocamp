@@ -12,23 +12,35 @@ type RankingRepository interface {
 }
 
 type CachedRankingRepository struct {
-	cache *cache.RedisRankingCache
+	// 使用具体实现，可读性更好，对测试不友好，因为没有面向接口编程
+	redisCache *cache.RedisRankingCache
+	localCache *cache.LocalRankingCache
 }
 
-func NewCachedRankingRepository(cache *cache.RedisRankingCache) *CachedRankingRepository {
+func NewCachedRankingRepository(redis *cache.RedisRankingCache, local *cache.LocalRankingCache) RankingRepository {
 	return &CachedRankingRepository{
-		cache: cache,
+		redisCache: redis,
+		localCache: local,
 	}
 }
 
 func (c *CachedRankingRepository) ReplaceTopN(ctx context.Context, arts []domain.Article) error {
-	return c.cache.Set(ctx, arts)
+	// 先Set local， 在Set redis。 因为localcache基本不会出错
+	c.localCache.Set(ctx, arts)
+	err := c.redisCache.Set(ctx, arts)
+	return err
 }
 
 func (c *CachedRankingRepository) GetTopN(ctx context.Context) ([]domain.Article, error) {
-	arts, err := c.cache.Get(ctx)
-	if err != nil {
-		return nil, err
+	arts, err := c.localCache.Get(ctx)
+	if err == nil {
+		return arts, nil
 	}
-	return arts, err
+	//读取local失败了，从redis里读取
+	arts, err = c.redisCache.Get(ctx)
+	if err == nil {
+		return arts, nil
+	}
+	// 如果此时还是报错，则强制从local里读
+	return c.localCache.ForceGet(ctx)
 }

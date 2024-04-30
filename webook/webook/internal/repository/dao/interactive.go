@@ -19,8 +19,8 @@ type InteractiveDAO interface {
 	DeleteCollectionInfo(ctx context.Context, biz string, bizId int64, cid int64, uid int64) error
 	GetCollectionInfo(ctx context.Context, biz string, bizId int64, uid int64) (UserCollectionBiz, error)
 	GetInteractive(ctx context.Context, biz string, bizId int64) (Interactive, error)
-	SetInteractive(ctx context.Context, biz string, bizId int64, interactive Interactive) error
 	GetTopLike(ctx context.Context, biz string, limit int64) ([]Interactive, error)
+	GetByIds(ctx context.Context, biz string, bizIds []int64) (map[int64]Interactive, error)
 }
 
 type GORMInteractiveDAO struct {
@@ -250,11 +250,6 @@ func (dao *GORMInteractiveDAO) GetInteractive(ctx context.Context, biz string, b
 	return interactive, err
 }
 
-func (dao *GORMInteractiveDAO) SetInteractive(ctx context.Context, biz string, bizId int64, interactive Interactive) error {
-	//TODO implement me
-	panic("implement me")
-}
-
 func (dao *GORMInteractiveDAO) GetTopLike(ctx context.Context, biz string, limit int64) ([]Interactive, error) {
 	var data []Interactive
 	err := dao.db.WithContext(ctx).Model(&Interactive{}).
@@ -262,6 +257,22 @@ func (dao *GORMInteractiveDAO) GetTopLike(ctx context.Context, biz string, limit
 		Find(&data).Error
 
 	return data, err
+}
+
+func (dao *GORMInteractiveDAO) GetByIds(ctx context.Context, biz string, ids []int64) (map[int64]Interactive, error) {
+	var err error
+	intrs := make(map[int64]Interactive)
+	for _, id := range ids {
+		var interactive Interactive
+		err = dao.db.WithContext(ctx).Model(&Interactive{}).
+			Where("biz = ? AND biz_id = ?", biz, id).First(&interactive).Error
+		if err != nil {
+			continue
+		}
+		intrs[id] = interactive
+	}
+
+	return intrs, nil
 }
 
 // Interactive 正常来说，一张主表和与它有关联关系的表会共用一个DAO，
