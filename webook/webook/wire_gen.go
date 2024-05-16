@@ -75,6 +75,7 @@ func InitWebServer() *App {
 		consumers: v2,
 		rh:        handler,
 		cron:      cron,
+		rankJob:   rankingJob,
 	}
 	return app
 }

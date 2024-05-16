@@ -38,6 +38,7 @@ func main() {
 	defer cancel()
 
 	ctx = app.cron.Stop()
+	app.rankJob.Close()
 	// 想办法 close ？？
 	// 这边可以考虑超时强制退出，防止有些任务，执行特别长的时间
 	tm := time.NewTimer(time.Minute * 10)
