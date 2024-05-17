@@ -2,9 +2,12 @@ package job
 
 import (
 	"context"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository/cache"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/service"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/pkg/logger"
+	"github.com/ecodeclub/ekit/slice"
 	rlock "github.com/gotomicro/redis-lock"
+	"math/rand"
 	"sync"
 	"time"
 )
@@ -17,15 +20,25 @@ type RankingJob struct {
 	key       string
 	localLock *sync.Mutex
 	l         logger.Logger
+	loadCache cache.RedisLoadSortCache // 拿锁时增加对Load的检测
+	instance  string                   // 标记是哪个instance
 }
 
-func NewRankingJob(svc service.RankingService, timeout time.Duration, client *rlock.Client, key string, l logger.Logger) *RankingJob {
+func NewRankingJob(svc service.RankingService,
+	timeout time.Duration,
+	client *rlock.Client,
+	key string,
+	l logger.Logger,
+	loadCache cache.RedisLoadSortCache,
+	instance string) *RankingJob {
 	return &RankingJob{svc: svc,
 		timeout:   timeout,
 		client:    client,
 		key:       key,
 		l:         l,
 		localLock: &sync.Mutex{},
+		loadCache: loadCache,
+		instance:  instance,
 	}
 }
 
@@ -39,6 +52,31 @@ func (r *RankingJob) Run() error {
 	// 比如一个进程刚设置好r.lock = lock, 结果与此同时AutoRefresh的goroutine又给设置成r.lock = nil
 	r.localLock.Lock()
 	defer r.localLock.Unlock()
+	// 这里将此时的Load数据写入Cache
+	// 随机数模拟Load
+	load := getLoad()
+	err := r.loadCache.SetLoad(context.Background(), r.instance, load)
+	if err != nil {
+		return err
+	}
+
+	lowLoadInstances, err := r.loadCache.
+		GetSortedLowLoad(context.Background(), 2)
+	// 如果有err，那还是参与拿锁
+	if err == nil && lowLoadInstances != nil {
+		// 当前instance的负载不在最低的3个，
+		// 如果当前有锁，则还要Unlock
+		if !slice.Contains[string](lowLoadInstances, r.instance) {
+			r.l.Debug("当前instance负载不为最小的前三个",
+				logger.String("instance", r.instance),
+				logger.Float64("load", load))
+			if r.lock != nil {
+				r.lock.Unlock(context.Background())
+			}
+			return nil
+		}
+	}
+
 	if r.lock == nil {
 		// 说明你没拿到锁，你得试着拿锁
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
@@ -95,4 +133,9 @@ func (r *RankingJob) Close() error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	return lock.Unlock(ctx)
+}
+
+// 模拟取得Load数， 随机生成
+func getLoad() float64 {
+	return rand.Float64() * 100
 }
