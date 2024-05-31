@@ -18,7 +18,7 @@ type Job struct {
 	CancelFunc func() error
 }
 
-var parser = cron.NewParser(cron.Minute | cron.Hour | cron.Dom |
+var parser = cron.NewParser(cron.Second | cron.Minute | cron.Hour | cron.Dom |
 	cron.Month | cron.Dow | cron.Descriptor)
 
 func (j *Job) NextTime() time.Time {

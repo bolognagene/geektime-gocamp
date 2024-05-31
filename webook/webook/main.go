@@ -28,7 +28,13 @@ func main() {
 
 	app.rh.NotifyKeyExpiredEvent()
 
-	app.cron.Start()
+	// 分布式锁
+	//app.cron.Start()
+
+	// CronJobScheduler
+	go func() {
+		app.cronJobScheduler.Schedule(context.Background())
+	}()
 
 	app.web.Run(":8077") // 监听并在 0.0.0.0:8077 上启动服务
 
@@ -37,8 +43,9 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 
-	ctx = app.cron.Stop()
-	app.rankJob.Close()
+	// 分布式锁
+	//ctx = app.cron.Stop()
+	//app.rankJob.Close()
 	// 想办法 close ？？
 	// 这边可以考虑超时强制退出，防止有些任务，执行特别长的时间
 	tm := time.NewTimer(time.Minute * 10)

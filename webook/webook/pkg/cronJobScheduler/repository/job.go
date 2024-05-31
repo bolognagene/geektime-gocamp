@@ -11,13 +11,14 @@ type CronJobRepository interface {
 	Release(ctx context.Context, id int64) error
 	UpdateUtime(ctx context.Context, id int64) error
 	UpdateNextTime(ctx context.Context, id int64, next_time int64) error
+	Stop(ctx context.Context, id int64) error
 }
 
 type PreemptCronJobRepository struct {
-	dao dao.GORMCronJobDAO
+	dao dao.CronJobDAO
 }
 
-func NewPreemptCronJobRepository(dao dao.GORMCronJobDAO) CronJobRepository {
+func NewPreemptCronJobRepository(dao dao.CronJobDAO) CronJobRepository {
 	return &PreemptCronJobRepository{
 		dao: dao,
 	}
@@ -45,9 +46,11 @@ func (repo *PreemptCronJobRepository) toEntity(job domain.Job) dao.Job {
 
 func (repo *PreemptCronJobRepository) toDomain(job dao.Job) domain.Job {
 	return domain.Job{
-		Id:   job.Id,
-		Name: job.Name,
-		Cfg:  job.Cfg,
+		Id:           job.Id,
+		Name:         job.Name,
+		Cfg:          job.Cfg,
+		ExecutorName: job.ExecutorName,
+		Cron:         job.Cron,
 	}
 }
 
@@ -57,4 +60,8 @@ func (repo *PreemptCronJobRepository) UpdateUtime(ctx context.Context, id int64)
 
 func (repo *PreemptCronJobRepository) UpdateNextTime(ctx context.Context, id int64, next_time int64) error {
 	return repo.dao.UpdateNextTime(ctx, id, next_time)
+}
+
+func (repo *PreemptCronJobRepository) Stop(ctx context.Context, id int64) error {
+	return repo.dao.Stop(ctx, id)
 }

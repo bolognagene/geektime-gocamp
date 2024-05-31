@@ -12,8 +12,12 @@ import (
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/service"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/ioc"
+	schedule_repo "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/pkg/cronJobScheduler/repository"
+	schedule_dao "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/pkg/cronJobScheduler/repository/dao"
+	schedule_service "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/pkg/cronJobScheduler/service"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/pkg/redisx"
 	"github.com/google/wire"
+	"time"
 )
 
 var interactiveSvcProvider = wire.NewSet(
@@ -37,6 +41,20 @@ var rankingServiceSet = wire.NewSet(
 	repository.NewCachedRankingRepository,
 	ioc.InitLocalRankingCache,
 	ioc.InitRedisRankingCache,
+	ioc.InitRedisLoadSortCache,
+)
+
+// 用于mysql任务调度的实现方式
+var cronJobSchedulerSet = wire.NewSet(
+	ioc.InitCronJobScheduler,
+	ioc.InitLocalFuncExecutor,
+)
+
+var cronJobSvcProvider = wire.NewSet(
+	wire.Value(time.Duration(time.Minute)),
+	schedule_service.NewPreemptCronJobService,
+	schedule_repo.NewPreemptCronJobRepository,
+	schedule_dao.NewGORMCronJobDAO,
 )
 
 var userServiceSet = wire.NewSet(
@@ -51,13 +69,6 @@ var codeSvcProvider = wire.NewSet(
 	repository.NewCodeRepository,
 	cache.NewCodeCache,
 )
-
-/*var cronJobSvcProvider = wire.NewSet(
-	wire.Value(time.Duration(time.Minute)),
-	schedule_service.NewPreemptCronJobService,
-	schedule_repo.NewPreemptCronJobRepository,
-	schedule_dao.NewGORMCronJobDAO,
-)*/
 
 func InitWebServer() *App {
 	wire.Build(
@@ -82,7 +93,8 @@ func InitWebServer() *App {
 		key_expired_event.NewTopLikeKey,
 		ioc.NewKeyExpiredKeys,
 		redisx.NewHandler,
-		ioc.InitRLockClient,
+		// 分布式锁
+		//ioc.InitRLockClient,
 
 		// Service
 		interactiveSvcProvider,
@@ -90,13 +102,16 @@ func InitWebServer() *App {
 		rankingServiceSet,
 		codeSvcProvider,
 		userServiceSet,
-		//cronJobSvcProvider,
+		// cronjob scheduler
+		cronJobSvcProvider,
+		cronJobSchedulerSet,
 
 		ioc.InitWechatService,
 		// 直接基于内存实现
 		ioc.InitSMSService,
-		ioc.InitRankingJob,
-		ioc.InitJobs,
+		// 用于分布式锁的实现方式
+		//ioc.InitRankingJob,
+		//ioc.InitJobs,
 
 		ioc.NewWechatHandlerConfig,
 		ioc.InitRedisJWTHander,

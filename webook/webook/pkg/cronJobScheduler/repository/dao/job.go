@@ -11,6 +11,7 @@ type CronJobDAO interface {
 	Release(ctx context.Context, id int64) error
 	UpdateUtime(ctx context.Context, id int64) error
 	UpdateNextTime(ctx context.Context, id int64, next_time int64) error
+	Stop(ctx context.Context, id int64) error
 }
 
 type GORMCronJobDAO struct {
@@ -55,7 +56,9 @@ func (dao *GORMCronJobDAO) Preempt(ctx context.Context) (Job, error) {
 		// 2. 我搞个随机偏移量，0-100 生成一个随机偏移量。兜底：第一轮没查到，偏移量回归到 0
 		// 3. 我搞一个 id 取余分配，status = ? AND next_time <=? AND id%10 = ? 兜底：不加余数条件，取next_time 最老的
 		err := dao.db.WithContext(ctx).Model(&Job{}).
-			Where("status = ? AND next_time <= ?", jobStatusWaiting, now).
+			Where("(status = ? AND next_time <= ?) "+
+				"OR (status = ? AND utime <= ?)", jobStatusWaiting, now,
+				jobStatusRunning, now-(time.Minute*3).Milliseconds()).
 			First(&job).Error
 		if err != nil {
 			return Job{}, err
@@ -102,6 +105,16 @@ func (dao *GORMCronJobDAO) UpdateNextTime(ctx context.Context, id int64, next_ti
 		}).Error
 }
 
+func (dao *GORMCronJobDAO) Stop(ctx context.Context, id int64) error {
+	now := time.Now().UnixMilli()
+	return dao.db.WithContext(ctx).Model(&Job{}).
+		Where("id = ? ", id).
+		Updates(map[string]any{
+			"status": jobStatusPaused,
+			"utime":  now,
+		}).Error
+}
+
 type Job struct {
 	Id int64 `gorm:"primaryKey,autoIncrement"`
 	// 比如说 ranking
@@ -118,6 +131,11 @@ type Job struct {
 	// 要建立索引
 	// 更加好的应该是 next_time 和 status 的联合索引
 	NextTime int64 `gorm:"index"`
+
+	ExecutorName string
+
+	// cron 表达式
+	Cron string
 
 	Version int
 	// 创建时间，毫秒数

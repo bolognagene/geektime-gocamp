@@ -16,8 +16,12 @@ import (
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/service"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/ioc"
+	repository2 "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/pkg/cronJobScheduler/repository"
+	dao2 "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/pkg/cronJobScheduler/repository/dao"
+	service2 "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/pkg/cronJobScheduler/service"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/pkg/redisx"
 	"github.com/google/wire"
+	"time"
 )
 
 import (
@@ -67,21 +71,24 @@ func InitWebServer() *App {
 	localRankingCache := ioc.InitLocalRankingCache()
 	rankingRepository := repository.NewCachedRankingRepository(redisRankingCache, localRankingCache)
 	rankingService := service.NewBatchRankingService(articleService, interactiveService, rankingRepository)
-	rlockClient := ioc.InitRLockClient(cmdable)
-	rankingJob := ioc.InitRankingJob(rankingService, rlockClient, logger)
-	cron := ioc.InitJobs(logger, rankingJob)
+	localFuncExecutor := ioc.InitLocalFuncExecutor(rankingService, logger)
+	cronJobDAO := dao2.NewGORMCronJobDAO(db)
+	cronJobRepository := repository2.NewPreemptCronJobRepository(cronJobDAO)
+	duration := _wireDurationValue
+	cronJobService := service2.NewPreemptCronJobService(cronJobRepository, duration, logger)
+	cronJobScheduler := ioc.InitCronJobScheduler(logger, localFuncExecutor, cronJobService)
 	app := &App{
-		web:       engine,
-		consumers: v2,
-		rh:        handler,
-		cron:      cron,
-		rankJob:   rankingJob,
+		web:              engine,
+		consumers:        v2,
+		rh:               handler,
+		cronJobScheduler: cronJobScheduler,
 	}
 	return app
 }
 
 var (
-	_wireStringValue = string("article")
+	_wireStringValue   = string("article")
+	_wireDurationValue = time.Duration(time.Minute)
 )
 
 // wire.go:
@@ -90,7 +97,12 @@ var interactiveSvcProvider = wire.NewSet(service.NewInteractiveService, reposito
 
 var articleServiceSet = wire.NewSet(service.NewArticleService, repository.NewCachedArticleRepository, article.NewGORMArticleDAO, cache.NewRedisArticleCache)
 
-var rankingServiceSet = wire.NewSet(service.NewBatchRankingService, repository.NewCachedRankingRepository, ioc.InitLocalRankingCache, ioc.InitRedisRankingCache)
+var rankingServiceSet = wire.NewSet(service.NewBatchRankingService, repository.NewCachedRankingRepository, ioc.InitLocalRankingCache, ioc.InitRedisRankingCache, ioc.InitRedisLoadSortCache)
+
+// 用于mysql任务调度的实现方式
+var cronJobSchedulerSet = wire.NewSet(ioc.InitCronJobScheduler, ioc.InitLocalFuncExecutor)
+
+var cronJobSvcProvider = wire.NewSet(wire.Value(time.Duration(time.Minute)), service2.NewPreemptCronJobService, repository2.NewPreemptCronJobRepository, dao2.NewGORMCronJobDAO)
 
 var userServiceSet = wire.NewSet(service.NewUserService, repository.NewUserRepository, dao.NewUserDAO, ioc.InitUserCache)
 

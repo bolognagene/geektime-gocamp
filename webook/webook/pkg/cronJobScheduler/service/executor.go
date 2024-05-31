@@ -9,7 +9,7 @@ import (
 type Executor interface {
 	Name() string
 	Exec(ctx context.Context, job domain.Job) error
-	Register(job domain.Job, fn func(ctx context.Context, job domain.Job) error)
+	RegisterFunc(name string, fn func(ctx context.Context, job domain.Job) error)
 }
 
 type LocalFuncExecutor struct {
@@ -17,15 +17,15 @@ type LocalFuncExecutor struct {
 	l     logger.Logger
 }
 
-func NewLocalFuncExecutor(l logger.Logger) Executor {
+func NewLocalFuncExecutor(l logger.Logger) *LocalFuncExecutor {
 	return &LocalFuncExecutor{
 		l:     l,
 		funcs: make(map[string]func(ctx context.Context, job domain.Job) error),
 	}
 }
 
-func (e *LocalFuncExecutor) Register(job domain.Job, fn func(ctx context.Context, job domain.Job) error) {
-	e.funcs[job.Name] = fn
+func (e *LocalFuncExecutor) RegisterFunc(name string, fn func(ctx context.Context, job domain.Job) error) {
+	e.funcs[name] = fn
 }
 
 func (e *LocalFuncExecutor) Name() string {

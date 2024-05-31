@@ -29,7 +29,7 @@ func InitDB(l logger.Logger) *gorm.DB {
 			// 一次磁盘 IO 是不到 10ms
 			SlowThreshold:             time.Millisecond * 10,
 			IgnoreRecordNotFoundError: true,
-			ParameterizedQueries:      true,
+			ParameterizedQueries:      false, // 如果想在log里看到查询时传入的值，则设置为false
 			LogLevel:                  glogger.Info,
 		}),
 	})

@@ -2,16 +2,18 @@ package main
 
 import (
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/events"
-	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/job"
+	schedule_service "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/pkg/cronJobScheduler/service"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/pkg/redisx"
 	"github.com/gin-gonic/gin"
-	"github.com/robfig/cron/v3"
 )
 
 type App struct {
 	web       *gin.Engine
 	consumers []events.Consumer
 	rh        *redisx.Handler
-	cron      *cron.Cron
-	rankJob   *job.RankingJob
+	// 分布式锁来计算Ranking
+	//cron *cron.Cron
+	//rankJob   *job.RankingJob
+	// Scheduler
+	cronJobScheduler *schedule_service.CronJobScheduler
 }

@@ -3,32 +3,45 @@ package service
 import (
 	"context"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/pkg/logger"
+	"golang.org/x/sync/semaphore"
 	"time"
 )
 
 type JobScheduler interface {
 	Schedule(ctx context.Context) error
+	RegisterExecutor(exec Executor)
 }
 
 // CronJobScheduler Scheduler 调度器
 type CronJobScheduler struct {
-	execs map[string]Executor
-	svc   CronJobService
-	l     logger.Logger
+	execs   map[string]Executor
+	svc     CronJobService
+	l       logger.Logger
+	limiter *semaphore.Weighted
 }
 
-func NewCronJobScheduler(svc CronJobService, l logger.Logger) JobScheduler {
+func NewCronJobScheduler(svc CronJobService, l logger.Logger) *CronJobScheduler {
 	return &CronJobScheduler{
-		svc:   svc,
-		l:     l,
-		execs: make(map[string]Executor),
+		svc:     svc,
+		l:       l,
+		execs:   make(map[string]Executor),
+		limiter: semaphore.NewWeighted(200),
 	}
 }
 
 func (s *CronJobScheduler) Schedule(ctx context.Context) error {
 	for {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+
+		err := s.limiter.Acquire(ctx, 1)
+		if err != nil {
+			return err
+		}
+	
 		// 一次调度的数据库查询时间
-		dbCtx, cancel := context.WithTimeout(ctx, time.Second)
+		dbCtx, cancel := context.WithTimeout(context.Background(), time.Minute*5)
 		job, err := s.svc.Preempt(dbCtx)
 		cancel()
 
@@ -49,6 +62,15 @@ func (s *CronJobScheduler) Schedule(ctx context.Context) error {
 
 		// 开始执行
 		go func() {
+			defer func() {
+				s.limiter.Release(1)
+				err1 := job.CancelFunc()
+				if err1 != nil {
+					s.l.Error("释放任务失败",
+						logger.Error(err1),
+						logger.Int64("jid", job.Id))
+				}
+			}()
 			// 异步执行，不要阻塞主调度循环
 			// 执行完毕之后
 			// 这边要考虑超时控制，任务的超时控制
@@ -59,9 +81,13 @@ func (s *CronJobScheduler) Schedule(ctx context.Context) error {
 			}
 
 			// 你要不要考虑下一次调度？设置next_time
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 			defer cancel()
 			err1 = s.svc.ResetNextTime(ctx, job)
 		}()
 	}
+}
+
+func (s *CronJobScheduler) RegisterExecutor(exec Executor) {
+	s.execs[exec.Name()] = exec
 }

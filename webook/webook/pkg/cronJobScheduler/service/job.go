@@ -15,12 +15,12 @@ type CronJobService interface {
 }
 
 type PreemptCronJobService struct {
-	repo            repository.PreemptCronJobRepository
+	repo            repository.CronJobRepository
 	refreshInterval time.Duration
 	l               logger.Logger
 }
 
-func NewPreemptCronJobService(repo repository.PreemptCronJobRepository,
+func NewPreemptCronJobService(repo repository.CronJobRepository,
 	refreshInterval time.Duration, l logger.Logger) CronJobService {
 	return &PreemptCronJobService{
 		repo:            repo,
@@ -33,6 +33,7 @@ func (svc *PreemptCronJobService) ResetNextTime(ctx context.Context, job domain.
 	nt := job.NextTime()
 	if nt.IsZero() {
 		// 没有下一次
+		svc.repo.Stop(ctx, job.Id)
 		return nil
 	}
 	return svc.repo.UpdateNextTime(ctx, job.Id, nt.UnixMilli())
@@ -60,9 +61,7 @@ func (svc *PreemptCronJobService) Preempt(ctx context.Context) (domain.Job, erro
 		return svc.repo.Release(ctx, job.Id)
 	}
 
-	return domain.Job{
-		Cfg: job.Cfg,
-	}, nil
+	return job, nil
 }
 
 func (svc *PreemptCronJobService) refresh(id int64) error {
