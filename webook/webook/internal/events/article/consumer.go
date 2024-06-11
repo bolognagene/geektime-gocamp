@@ -3,7 +3,7 @@ package article
 import (
 	"context"
 	"github.com/IBM/sarama"
-	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/interacitve/repository"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/pkg/logger"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/pkg/saramax"
 	"time"

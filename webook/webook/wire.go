@@ -3,6 +3,10 @@
 package main
 
 import (
+	repository2 "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/interacitve/repository"
+	cache2 "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/interacitve/repository/cache"
+	dao2 "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/interacitve/repository/dao"
+	service2 "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/interacitve/service"
 	event_article "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/events/article"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/key_expired_event"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository"
@@ -21,10 +25,10 @@ import (
 )
 
 var interactiveSvcProvider = wire.NewSet(
-	service.NewInteractiveService,
-	repository.NewCachedInteractiveRepository,
-	dao.NewGORMInteractiveDAO,
-	cache.NewRedisInteractiveCache,
+	service2.NewInteractiveService,
+	repository2.NewCachedInteractiveRepository,
+	dao2.NewGORMInteractiveDAO,
+	cache2.NewRedisInteractiveCache,
 )
 
 var articleServiceSet = wire.NewSet(

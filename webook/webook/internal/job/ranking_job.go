@@ -114,7 +114,9 @@ func (r *RankingJob) Run() error {
 			// 因为AutoRefresh里是一个无限循环，除非续约失败，否则会一直循环而不退出AutoRefresh函数
 			// 所以一旦走到这里，表示AutoRefresh退出了，一定是续约失败了
 			// 所以要把r.lock设置为nil
+			r.localLock.Lock()
 			r.lock = nil
+			r.localLock.Unlock()
 			// lock.Unlock(ctx)
 		}()
 	}

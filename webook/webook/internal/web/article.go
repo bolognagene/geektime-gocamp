@@ -2,6 +2,8 @@ package web
 
 import (
 	"fmt"
+	domain2 "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/interacitve/domain"
+	service2 "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/interacitve/service"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/codes"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/domain"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/service"
@@ -21,7 +23,7 @@ var _ handler = (*ArticleHandler)(nil)
 
 type ArticleHandler struct {
 	svc      service.ArticleService
-	interSvc service.InteractiveService
+	interSvc service2.InteractiveService
 	l        logger.Logger
 	biz      string
 }
@@ -29,7 +31,7 @@ type ArticleHandler struct {
 var TopLikeN atomic.Int64 = atomic.Int64{}
 var TopLikeLimit atomic.Int64 = atomic.Int64{}
 
-func NewArticleHandler(svc service.ArticleService, interSvc service.InteractiveService, l logger.Logger) *ArticleHandler {
+func NewArticleHandler(svc service.ArticleService, interSvc service2.InteractiveService, l logger.Logger) *ArticleHandler {
 	topLikeN := viper.GetInt64("TopLike.N")
 	topLikeLimit := viper.GetInt64("TopLike.Limit")
 	if topLikeN == 0 {
@@ -214,7 +216,7 @@ func (h *ArticleHandler) PubDetail(ctx *gin.Context, uc myjwt.UserClaims) (ginx.
 
 	var eg errgroup.Group
 	var article domain.Article
-	var interactive domain.Interactive
+	var interactive domain2.Interactive
 
 	eg.Go(func() error {
 		article, err = h.svc.PubDetail(ctx, id, uid)

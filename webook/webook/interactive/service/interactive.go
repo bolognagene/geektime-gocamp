@@ -2,8 +2,8 @@ package service
 
 import (
 	"context"
-	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/domain"
-	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/interactive/domain"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/interactive/repository"
 	"golang.org/x/sync/errgroup"
 )
 

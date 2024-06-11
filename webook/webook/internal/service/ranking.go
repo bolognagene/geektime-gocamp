@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/interacitve/service"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/domain"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository"
 	"github.com/ecodeclub/ekit/queue"
@@ -16,7 +17,7 @@ type RankingService interface {
 
 type BatchRankingService struct {
 	artSvc    ArticleService
-	intrSvc   InteractiveService
+	intrSvc   service.InteractiveService
 	repo      repository.RankingRepository
 	batchSize int
 	n         int
@@ -26,7 +27,7 @@ type BatchRankingService struct {
 }
 
 func NewBatchRankingService(artSvc ArticleService,
-	intrSvc InteractiveService,
+	intrSvc service.InteractiveService,
 	repo repository.RankingRepository) RankingService {
 	return &BatchRankingService{
 		artSvc:    artSvc,

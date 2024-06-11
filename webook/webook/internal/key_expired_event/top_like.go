@@ -3,7 +3,7 @@ package key_expired_event
 import (
 	"context"
 	"fmt"
-	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/interacitve/repository"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/web"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/pkg/logger"
 )

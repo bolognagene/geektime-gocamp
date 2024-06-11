@@ -3,9 +3,9 @@ package repository
 import (
 	"context"
 	"fmt"
-	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/domain"
-	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository/cache"
-	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository/dao"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/interacitve/domain"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/interacitve/repository/cache"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/interacitve/repository/dao"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/pkg/logger"
 	"github.com/redis/go-redis/v9"
 )
