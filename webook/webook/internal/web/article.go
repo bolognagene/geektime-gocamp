@@ -2,8 +2,8 @@ package web
 
 import (
 	"fmt"
-	domain2 "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/interacitve/domain"
-	service2 "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/interacitve/service"
+	domain2 "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/interactive/domain"
+	service2 "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/interactive/service"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/codes"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/domain"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/service"

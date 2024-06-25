@@ -2,7 +2,7 @@ package service
 
 import (
 	"context"
-	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/interacitve/service"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/interactive/service"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/domain"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository"
 	"github.com/ecodeclub/ekit/queue"

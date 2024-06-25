@@ -1,13 +1,16 @@
-package article
+package events
 
 import (
 	"context"
 	"github.com/IBM/sarama"
-	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/interacitve/repository"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/interactive/repository"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/events"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/pkg/logger"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/pkg/saramax"
 	"time"
 )
+
+var _ events.Consumer = &InteractiveReadEventConsumer{}
 
 type InteractiveReadEventBatchConsumer struct {
 	client sarama.Client

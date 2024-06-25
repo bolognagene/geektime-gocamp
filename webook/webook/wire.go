@@ -7,6 +7,7 @@ import (
 	cache2 "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/interacitve/repository/cache"
 	dao2 "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/interacitve/repository/dao"
 	service2 "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/interacitve/service"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/interactive/events"
 	event_article "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/events/article"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/key_expired_event"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository"
@@ -90,7 +91,7 @@ func InitWebServer() *App {
 		// consumer & producer
 		event_article.NewKafkaProducer,
 		//event_article.NewInteractiveReadEventBatchConsumer,
-		event_article.NewInteractiveReadEventConsumer,
+		events.NewInteractiveReadEventConsumer,
 
 		// redis key expired notify
 		wire.Value(string("article")),

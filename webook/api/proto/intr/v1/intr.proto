@@ -1,0 +1,122 @@
+syntax = "proto3";
+
+package intr.v1;
+option go_package="intr/v1;intrv1";
+
+service InteractiveService {
+  rpc IncrReadCnt(IncrReadCntRequest) returns (IncrReadCntResponse);
+  rpc Like(LikeRequest) returns (LikeResponse);
+  rpc Unlike(UnlikeRequest) returns (UnlikeResponse);
+  rpc AddCollect(AddCollectRequest) returns (AddCollectResponse);
+  rpc DeleteCollect(DeleteCollectRequest) returns (DeleteCollectResponse);
+  rpc Get(GetRequest) returns (GetResponse);
+  rpc TopLike(TopLikeRequest) returns (TopLikeResponse);
+  rpc GetByIds(GetByIdsRequest) returns (GetByIdsResponse);
+}
+
+message GetByIdsResponse {
+  map<int64, Interactive> intrs = 1;
+}
+
+message GetByIdsRequest {
+  string biz = 1;
+  repeated int64  bizIds = 2;
+}
+
+message TopWithScore {
+  float score = 1;
+  int64 member = 2;
+}
+
+message TopLikeResponse {
+  repeated TopWithScore top_with_scores = 1;
+}
+
+message TopLikeRequest {
+  string biz = 1;
+  int64  n = 2;
+  int64  limit = 3;
+}
+
+message Interactive {
+  string  biz = 1;
+  int64  biz_id = 2;
+  int64  like_cnt = 3;
+  int64  read_cnt = 4;
+  int64  collect_cnt = 5;
+  bool liked = 6;
+  bool collected = 7;
+}
+
+
+message GetResponse {
+  Interactive intr = 1;
+}
+
+message GetRequest {
+  string biz = 1;
+  int64  biz_id = 2;
+  int64  uid = 3;
+}
+
+message DeleteCollectResponse {
+
+}
+
+message DeleteCollectRequest {
+  string biz = 1;
+  // protobuf 比较推荐下划线。你也可以用驼峰
+  int64  biz_id = 2;
+  int64  cid = 3;
+  int64  uid = 4;
+}
+
+message AddCollectResponse {
+
+}
+
+message AddCollectRequest {
+  string biz = 1;
+  // protobuf 比较推荐下划线。你也可以用驼峰
+  int64  biz_id = 2;
+  int64  cid = 3;
+  int64  uid = 4;
+}
+
+message UnlikeResponse {
+
+}
+
+message UnlikeRequest {
+  string biz = 1;
+  // protobuf 比较推荐下划线。你也可以用驼峰
+  int64  biz_id = 2;
+  int64  uid = 3;
+  int64  limit = 4;
+}
+
+
+message LikeResponse {
+
+}
+
+message LikeRequest {
+  string biz = 1;
+  // protobuf 比较推荐下划线。你也可以用驼峰
+  int64  biz_id = 2;
+  int64  uid = 3;
+  int64  limit = 4;
+}
+
+message IncrReadCntRequest {
+  string biz = 1;
+  int64  bizId = 2;
+}
+
+message IncrReadCntResponse {
+  // 有些公司的规范
+  // Code
+  // Msg
+  // Data
+}
+

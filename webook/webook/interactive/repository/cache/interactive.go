@@ -5,7 +5,6 @@ import (
 	_ "embed"
 	"fmt"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/interactive/domain"
-	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/interactive/repository/cache"
 	"github.com/redis/go-redis/v9"
 	"strconv"
 	"time"
@@ -125,7 +124,7 @@ func (r *RedisInteractiveCache) GetCnt(ctx context.Context, biz string, bizId in
 
 	if len(data) == 0 {
 		// 缓存不存在，系统错误，比如说你的同事，手贱设置了缓存，但是忘记任何 fields
-		return domain.Interactive{}, cache.ErrKeyNotExist
+		return domain.Interactive{}, ErrKeyNotExist
 	}
 
 	// 理论上来说，这里不可能有 error

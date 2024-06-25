@@ -1,6 +1,7 @@
 package ioc
 
 import (
+	interactive_dao "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/interactive/repository/dao"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository/dao"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/pkg/gormx"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/pkg/logger"
@@ -61,6 +62,11 @@ func InitDB(l logger.Logger) *gorm.DB {
 	db.Use(gcb)
 
 	err = dao.InitTable(db)
+	if err != nil {
+		panic(err)
+	}
+
+	err = interactive_dao.InitTable(db)
 	if err != nil {
 		panic(err)
 	}

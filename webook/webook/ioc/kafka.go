@@ -2,8 +2,8 @@ package ioc
 
 import (
 	"github.com/IBM/sarama"
+	events2 "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/interactive/events"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/events"
-	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/events/article"
 	"github.com/spf13/viper"
 )
 
@@ -45,6 +45,6 @@ func NewSyncProducer(client sarama.Client) sarama.SyncProducer {
 /*func NewConsumers(c1 *article.InteractiveReadEventBatchConsumer) []events.Consumer {
 	return []events.Consumer{c1}
 }*/
-func NewConsumers(c1 *article.InteractiveReadEventConsumer) []events.Consumer {
+func NewConsumers(c1 *events2.InteractiveReadEventConsumer) []events.Consumer {
 	return []events.Consumer{c1}
 }

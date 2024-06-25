@@ -7,10 +7,11 @@
 package main
 
 import (
-	repository3 "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/interacitve/repository"
-	cache2 "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/interacitve/repository/cache"
-	dao3 "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/interacitve/repository/dao"
-	service3 "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/interacitve/service"
+	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/interactive/events"
+	repository3 "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/interactive/repository"
+	cache2 "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/interactive/repository/cache"
+	dao3 "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/interactive/repository/dao"
+	service3 "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/interactive/service"
 	article2 "github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/events/article"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/key_expired_event"
 	"github.com/bolognagene/geektime-gocamp/geektime-gocamp/webook/webook/internal/repository"
@@ -65,7 +66,7 @@ func InitWebServer() *App {
 	interactiveService := service3.NewInteractiveService(interactiveRepository)
 	articleHandler := web.NewArticleHandler(articleService, interactiveService, logger)
 	engine := ioc.InitWebServer(v, userHandler, oAuth2WechatHandler, articleHandler)
-	interactiveReadEventConsumer := article2.NewInteractiveReadEventConsumer(client, interactiveRepository, logger)
+	interactiveReadEventConsumer := events.NewInteractiveReadEventConsumer(client, interactiveRepository, logger)
 	v2 := ioc.NewConsumers(interactiveReadEventConsumer)
 	string2 := _wireStringValue
 	topLikeKey := key_expired_event.NewTopLikeKey(interactiveRepository, logger, string2)
